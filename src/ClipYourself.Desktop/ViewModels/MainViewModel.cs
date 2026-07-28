@@ -34,6 +34,7 @@ public class MainViewModel : INotifyPropertyChanged
     private string _statusText = string.Empty;
     private bool _hotkeyRegistered = true;
     private string _searchText = string.Empty;
+    private bool _isCapturePaused;
 
     public AppSettings Settings { get; }
 
@@ -168,6 +169,19 @@ public class MainViewModel : INotifyPropertyChanged
         set { _hotkeyRegistered = value; Raise(nameof(HotkeyRegistered)); }
     }
 
+    /// <summary>While true, clipboard changes are ignored (drops still work).</summary>
+    public bool IsCapturePaused
+    {
+        get => _isCapturePaused;
+        set
+        {
+            if (_isCapturePaused == value) return;
+            _isCapturePaused = value;
+            Raise(nameof(IsCapturePaused));
+            ShowStatus(value ? "Capture paused" : "Capture resumed");
+        }
+    }
+
     public bool PersistClips
     {
         get => Settings.PersistClips;
@@ -225,6 +239,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void OnClipboardChanged()
     {
+        if (IsCapturePaused) return;
         if (DateTime.Now < _suppressCaptureUntil) return;
         Capture();
     }

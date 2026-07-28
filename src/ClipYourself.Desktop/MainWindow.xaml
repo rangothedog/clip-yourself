@@ -33,8 +33,12 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="{Binding Kind, Converter={StaticResource KindToGlyph}}"
-                               FontSize="14" Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <Border CornerRadius="4" Padding="5,2" Margin="0,1,8,0" VerticalAlignment="Top"
+                            Background="{Binding Kind, Converter={StaticResource KindBadgeBg}}">
+                        <TextBlock Text="{Binding Kind, Converter={StaticResource KindBadgeText}}"
+                                   FontFamily="Consolas" FontSize="9" FontWeight="Bold"
+                                   Foreground="{Binding Kind, Converter={StaticResource KindBadgeFg}}"/>
+                    </Border>
 
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="{Binding PreviewText}"
@@ -81,7 +85,7 @@
                                 </Style>
                             </Button.Style>
                         </Button>
-                        <Button Content="✕" Style="{StaticResource IconButton}"
+                        <Button Content="✕" Style="{StaticResource DangerIconButton}"
                                 Width="22" Height="22" FontSize="10"
                                 ToolTip="Remove this clip"
                                 Command="{Binding DataContext.DeleteClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -113,7 +117,8 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="🗂" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="🗂" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"
+                               Foreground="{StaticResource AccentBrush}"/>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <Button Style="{StaticResource LinkButton}" FontSize="12"
@@ -130,7 +135,7 @@
                             ToolTip="Open drawer"
                             Command="{Binding DataContext.OpenDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"/>
-                    <Button Grid.Column="3" Content="🗑" Style="{StaticResource IconButton}"
+                    <Button Grid.Column="3" Content="🗑" Style="{StaticResource DangerIconButton}"
                             ToolTip="Delete drawer"
                             Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"/>
@@ -157,18 +162,37 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="📋" FontSize="15" Margin="0,0,6,0"/>
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="6"
+                            Width="24" Height="24" Margin="0,0,8,0">
+                        <TextBlock Text="📋" FontSize="13" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                     <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
-                <ToggleButton Grid.Column="1" Content="📌" Style="{StaticResource ToggleIconButton}"
+                <ToggleButton Grid.Column="1" IsChecked="{Binding IsCapturePaused}">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton" BasedOn="{StaticResource ToggleIconButton}">
+                            <Setter Property="Content" Value="⏸"/>
+                            <Setter Property="ToolTip" Value="Pause clipboard capture"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter Property="Content" Value="▶"/>
+                                    <Setter Property="ToolTip" Value="Capture is paused — click to resume"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToggleButton.Style>
+                </ToggleButton>
+                <ToggleButton Grid.Column="2" Content="📌" Style="{StaticResource ToggleIconButton}"
                               ToolTip="Keep sidebar on top"
                               IsChecked="{Binding AlwaysOnTop}"/>
-                <Button Grid.Column="2" Content="⚙" Style="{StaticResource IconButton}"
+                <Button Grid.Column="3" Content="⚙" Style="{StaticResource IconButton}"
                         ToolTip="Settings" Command="{Binding ToggleSettingsCommand}"/>
-                <Button Grid.Column="3" Content="—" Style="{StaticResource IconButton}"
+                <Button Grid.Column="4" Content="—" Style="{StaticResource IconButton}"
                         ToolTip="Hide (Ctrl+Alt+V to bring back)" Click="HideButton_Click"/>
             </Grid>
         </Border>
@@ -185,9 +209,14 @@
                     <TextBox Style="{StaticResource GhostTextBox}" FontSize="13" FontWeight="SemiBold"
                              ToolTip="Click to rename this session"
                              Text="{Binding SessionDrawer.Name, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}" Margin="0,2,0,0">
-                        <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
-                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
+                            <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
+                        </TextBlock>
+                        <TextBlock Text=" · ⏸ capture paused" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource DangerBrush}"
+                                   Visibility="{Binding IsCapturePaused, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
                 </StackPanel>
                 <Button Grid.Column="1" Content="➕ Drawer" Style="{StaticResource AccentButton}"
                         ToolTip="Start a new drawer" VerticalAlignment="Center"
@@ -299,7 +328,7 @@
                                 <Run Text="{Binding Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
                             </TextBlock>
                         </StackPanel>
-                        <Button Grid.Column="2" Content="🧹" Style="{StaticResource IconButton}"
+                        <Button Grid.Column="2" Content="🧹" Style="{StaticResource DangerIconButton}"
                                 ToolTip="Clear all clips in this drawer"
                                 Command="{Binding DataContext.ClearDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"/>
@@ -307,7 +336,7 @@
                                 Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}">
                             <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                <Style TargetType="Button" BasedOn="{StaticResource DangerIconButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSession}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed"/>

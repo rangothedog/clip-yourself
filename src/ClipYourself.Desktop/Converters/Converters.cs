@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ClipYourself.Core.Models;
 
@@ -22,6 +23,83 @@ public class KindToVisibilityConverter : IValueConverter
         }
         return Visibility.Collapsed;
     }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Colored type badges (TXT/IMG/AUD/FILE) — WPF renders emoji monochrome,
+/// so tinted badges are how clip kinds get color on the dark theme.
+/// </summary>
+public static class KindBadge
+{
+    public static readonly Brush TextBg = Freeze("#FF23364F");
+    public static readonly Brush TextFg = Freeze("#FF7CB1FF");
+    public static readonly Brush ImageBg = Freeze("#FF1F3B2C");
+    public static readonly Brush ImageFg = Freeze("#FF7CE38B");
+    public static readonly Brush AudioBg = Freeze("#FF322A4A");
+    public static readonly Brush AudioFg = Freeze("#FFC4B5FD");
+    public static readonly Brush FilesBg = Freeze("#FF3D3323");
+    public static readonly Brush FilesFg = Freeze("#FFFFD97A");
+
+    private static Brush Freeze(string color)
+    {
+        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+        brush.Freeze();
+        return brush;
+    }
+}
+
+public class KindToBadgeTextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ClipKind kind
+            ? kind switch
+            {
+                ClipKind.Text => "TXT",
+                ClipKind.Image => "IMG",
+                ClipKind.Audio => "AUD",
+                ClipKind.Files => "FILE",
+                _ => "CLIP"
+            }
+            : "CLIP";
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+public class KindToBadgeBackgroundConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ClipKind kind
+            ? kind switch
+            {
+                ClipKind.Text => KindBadge.TextBg,
+                ClipKind.Image => KindBadge.ImageBg,
+                ClipKind.Audio => KindBadge.AudioBg,
+                ClipKind.Files => KindBadge.FilesBg,
+                _ => KindBadge.TextBg
+            }
+            : KindBadge.TextBg;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+public class KindToBadgeForegroundConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ClipKind kind
+            ? kind switch
+            {
+                ClipKind.Text => KindBadge.TextFg,
+                ClipKind.Image => KindBadge.ImageFg,
+                ClipKind.Audio => KindBadge.AudioFg,
+                ClipKind.Files => KindBadge.FilesFg,
+                _ => KindBadge.TextFg
+            }
+            : KindBadge.TextFg;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();

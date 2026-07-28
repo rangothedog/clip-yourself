@@ -17,6 +17,8 @@
         <SolidColorBrush x:Key="TextBrush" Color="#FFE8EAED"/>
         <SolidColorBrush x:Key="SubTextBrush" Color="#FF9AA3B2"/>
         <SolidColorBrush x:Key="FilmBrush" Color="#FF0B0D10"/>
+        <SolidColorBrush x:Key="IconBgBrush" Color="#FF323A45"/>
+        <SolidColorBrush x:Key="IconBgHoverBrush" Color="#FF415062"/>
 
         <!-- Converters -->
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -28,6 +30,9 @@
         <conv:NullToVisibilityConverter x:Key="NullToVis"/>
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
         <conv:ClipCountConverter x:Key="ClipCount"/>
+        <conv:KindToBadgeTextConverter x:Key="KindBadgeText"/>
+        <conv:KindToBadgeBackgroundConverter x:Key="KindBadgeBg"/>
+        <conv:KindToBadgeForegroundConverter x:Key="KindBadgeFg"/>
         <conv:ZeroToVisibleConverter x:Key="ZeroToVisible"/>
 
         <!-- Film sprocket holes for the reel view -->
@@ -42,50 +47,68 @@
             </DrawingBrush.Drawing>
         </DrawingBrush>
 
-        <!-- Small square icon-ish button -->
+        <!-- Small square icon-ish button; pill background gives the grey glyphs contrast
+             (WPF renders emoji monochrome — no color-font support) -->
         <Style x:Key="IconButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="28"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" Background="Transparent" CornerRadius="6">
+                        <Border x:Name="Chrome" Background="{StaticResource IconBgBrush}" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource CardHoverBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource IconBgHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Destructive actions glow red on hover -->
+        <Style x:Key="DangerIconButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="ToggleIconButton" TargetType="ToggleButton">
-            <Setter Property="Foreground" Value="{StaticResource SubTextBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="28"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Chrome" Background="Transparent" CornerRadius="6">
+                        <Border x:Name="Chrome" Background="{StaticResource IconBgBrush}" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource CardHoverBrush}"/>
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource IconBgHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="Chrome" Property="BorderThickness" Value="1"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
