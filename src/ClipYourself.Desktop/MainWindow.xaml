@@ -1,0 +1,342 @@
+<Window x:Class="ClipYourself.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:ClipYourself.Desktop.Controls"
+        mc:Ignorable="d"
+        Title="Clip Yourself"
+        Width="380" MinWidth="300" Height="800"
+        WindowStyle="None" ResizeMode="CanResize"
+        WindowStartupLocation="Manual"
+        Background="{StaticResource PanelBrush}"
+        Topmost="{Binding AlwaysOnTop}"
+        BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1">
+
+    <Window.Resources>
+
+        <!-- One clipboard entry, used by both the sidebar list and the reel -->
+        <DataTemplate x:Key="ClipCardTemplate">
+            <Button Style="{StaticResource CardButton}" ToolTip="Click to copy to clipboard"
+                    Command="{Binding DataContext.CopyClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="{Binding Kind, Converter={StaticResource KindToGlyph}}"
+                               FontSize="14" Margin="0,0,8,0" VerticalAlignment="Top"/>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding PreviewText}"
+                                   Foreground="{StaticResource TextBrush}" FontSize="12"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="54"
+                                   Visibility="{Binding Kind, Converter={StaticResource KindToVis}, ConverterParameter='Text,Files'}"/>
+
+                        <Image Source="{Binding ImagePath, Converter={StaticResource PathToImage}}"
+                               MaxHeight="130" Stretch="Uniform" HorizontalAlignment="Left"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               Visibility="{Binding Kind, Converter={StaticResource KindToVis}, ConverterParameter='Image'}"/>
+
+                        <StackPanel Visibility="{Binding Kind, Converter={StaticResource KindToVis}, ConverterParameter='Audio'}">
+                            <TextBlock Text="{Binding PreviewText}" FontSize="11"
+                                       Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                            <controls:WaveformPlayer Source="{Binding AudioPath}" Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="{Binding LastCopiedAt, Converter={StaticResource RelTime}}"
+                                       FontSize="10" Foreground="{StaticResource SubTextBrush}"/>
+                            <TextBlock Text="{Binding SizeBytes, Converter={StaticResource BytesToSize}}"
+                                       FontSize="10" Foreground="{StaticResource SubTextBrush}" Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Content="✕" Style="{StaticResource IconButton}"
+                            Width="22" Height="22" FontSize="10" VerticalAlignment="Top"
+                            ToolTip="Remove this clip"
+                            Command="{Binding DataContext.DeleteClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"/>
+                </Grid>
+            </Button>
+        </DataTemplate>
+
+        <!-- One drawer row in the "Drawers" section -->
+        <DataTemplate x:Key="DrawerRowTemplate">
+            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource EdgeBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="8,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="🗂" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBox Style="{StaticResource GhostTextBox}" FontSize="12"
+                                 ToolTip="Click to rename"
+                                 Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
+                            <Run Text="{Binding Clips.Count, Mode=OneWay}"/><Run Text=" clips · "/><Run Text="{Binding CreatedAt, Converter={StaticResource RelTime}, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Content="🎞" Style="{StaticResource IconButton}"
+                            ToolTip="Open drawer"
+                            Command="{Binding DataContext.OpenDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"/>
+                    <Button Grid.Column="3" Content="🗑" Style="{StaticResource IconButton}"
+                            ToolTip="Delete drawer"
+                            Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== Header (drag handle) ===== -->
+        <Border Grid.Row="0" Background="{StaticResource BgBrush}" Padding="12,8"
+                MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="📋" FontSize="15" Margin="0,0,6,0"/>
+                    <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <ToggleButton Grid.Column="1" Content="📌" Style="{StaticResource ToggleIconButton}"
+                              ToolTip="Keep sidebar on top"
+                              IsChecked="{Binding AlwaysOnTop}"/>
+                <Button Grid.Column="2" Content="⚙" Style="{StaticResource IconButton}"
+                        ToolTip="Settings" Command="{Binding ToggleSettingsCommand}"/>
+                <Button Grid.Column="3" Content="—" Style="{StaticResource IconButton}"
+                        ToolTip="Hide (Ctrl+Alt+V to bring back)" Click="HideButton_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- ===== Session bar ===== -->
+        <Border Grid.Row="1" Padding="12,10,12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBox Style="{StaticResource GhostTextBox}" FontSize="13" FontWeight="SemiBold"
+                             ToolTip="Click to rename this session"
+                             Text="{Binding SessionDrawer.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}" Margin="0,2,0,0">
+                        <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay}"/><Run Text=" clips · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
+                    </TextBlock>
+                </StackPanel>
+                <Button Grid.Column="1" Content="➕ Drawer" Style="{StaticResource AccentButton}"
+                        ToolTip="Start a new drawer" VerticalAlignment="Center"
+                        Command="{Binding NewDrawerCommand}"/>
+            </Grid>
+        </Border>
+
+        <!-- ===== Session clips ===== -->
+        <Grid Grid.Row="2">
+            <ListBox Style="{StaticResource FlatListBox}"
+                     ItemContainerStyle="{StaticResource PlainItemStyle}"
+                     ItemTemplate="{StaticResource ClipCardTemplate}"
+                     ItemsSource="{Binding SessionDrawer.Clips}"
+                     Padding="12,4,12,4"/>
+            <TextBlock Text="Copy anything and it shows up here.&#10;&#10;Ctrl+Alt+V summons the sidebar from anywhere."
+                       Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
+                       TextWrapping="Wrap" Margin="30,60,30,0" IsHitTestVisible="False"
+                       Visibility="{Binding SessionDrawer.Clips.Count, Converter={StaticResource ZeroToVisible}}"/>
+        </Grid>
+
+        <!-- ===== Drawers section ===== -->
+        <Border Grid.Row="3" BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0"
+                Background="{StaticResource BgBrush}" Padding="12,8,12,10">
+            <StackPanel>
+                <Grid Margin="0,0,0,6">
+                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubTextBrush}">
+                        <Run Text="DRAWERS ("/><Run Text="{Binding Drawers.Count, Mode=OneWay}"/><Run Text=")"/>
+                    </TextBlock>
+                </Grid>
+                <ListBox Style="{StaticResource FlatListBox}"
+                         ItemContainerStyle="{StaticResource PlainItemStyle}"
+                         ItemTemplate="{StaticResource DrawerRowTemplate}"
+                         ItemsSource="{Binding Drawers}"
+                         MaxHeight="190"/>
+                <TextBlock Text="No drawers yet — click ➕ Drawer to file clips by project."
+                           FontSize="10" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap"
+                           Visibility="{Binding Drawers.Count, Converter={StaticResource ZeroToVisible}}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== Reel view overlay (open drawer) ===== -->
+        <Border Grid.Row="0" Grid.RowSpan="4" Background="{StaticResource PanelBrush}"
+                Visibility="{Binding OpenDrawer, Converter={StaticResource NullToVis}}">
+            <Grid DataContext="{Binding OpenDrawer}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{StaticResource BgBrush}" Padding="8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="←" Style="{StaticResource IconButton}" ToolTip="Back to sidebar"
+                                Command="{Binding DataContext.CloseReelCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                            <TextBox Style="{StaticResource GhostTextBox}" FontSize="14" FontWeight="SemiBold"
+                                     ToolTip="Click to rename"
+                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
+                                <Run Text="{Binding Clips.Count, Mode=OneWay}"/><Run Text=" clips · "/><Run Text="{Binding TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
+                            </TextBlock>
+                        </StackPanel>
+                        <Button Grid.Column="2" Content="🧹" Style="{StaticResource IconButton}"
+                                ToolTip="Clear all clips in this drawer"
+                                Command="{Binding DataContext.ClearDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"/>
+                        <Button Grid.Column="3" Content="🗑" ToolTip="Delete this drawer"
+                                Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSession}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Background="{StaticResource BgBrush}" Padding="12,0,12,8">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Max clips" FontSize="10" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource FieldTextBox}" Width="48" FontSize="11" Margin="6,0,14,0"
+                                 Text="{Binding MaxClips, UpdateSourceTrigger=LostFocus}"/>
+                        <TextBlock Text="Max MB" FontSize="10" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource FieldTextBox}" Width="48" FontSize="11" Margin="6,0,14,0"
+                                 Text="{Binding MaxSizeMB, UpdateSourceTrigger=LostFocus}"/>
+                        <TextBlock Text="new copies land in this drawer while open" FontSize="10"
+                                   Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Film strip -->
+                <Border Grid.Row="2" Background="{StaticResource FilmBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                        </Grid.ColumnDefinitions>
+                        <Rectangle Grid.Column="0" Fill="{StaticResource SprocketBrush}"/>
+                        <ListBox Grid.Column="1"
+                                 Style="{StaticResource FlatListBox}"
+                                 ItemContainerStyle="{StaticResource PlainItemStyle}"
+                                 ItemTemplate="{StaticResource ClipCardTemplate}"
+                                 ItemsSource="{Binding Clips}"
+                                 Padding="10,10,10,10"/>
+                        <Rectangle Grid.Column="2" Fill="{StaticResource SprocketBrush}"/>
+                        <TextBlock Grid.Column="1" Text="This drawer is empty.&#10;Copy something while it's open to fill it."
+                                   Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
+                                   TextWrapping="Wrap" Margin="30,60,30,0" IsHitTestVisible="False"
+                                   Visibility="{Binding Clips.Count, Converter={StaticResource ZeroToVisible}}"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ===== Settings overlay ===== -->
+        <Border Grid.Row="0" Grid.RowSpan="4" Background="{StaticResource PanelBrush}"
+                Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Background="{StaticResource BgBrush}" Padding="8">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="←" Style="{StaticResource IconButton}" ToolTip="Back"
+                                Command="{Binding ToggleSettingsCommand}"/>
+                        <TextBlock Text="Settings" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <StackPanel Grid.Row="1" Margin="16,14">
+                    <CheckBox IsChecked="{Binding PersistClips}" Foreground="{StaticResource TextBrush}" FontSize="12"
+                              Content="Save clips between sessions"/>
+                    <TextBlock Text="When on, every drawer (including the current session) is saved automatically. Turning it off removes saved clips from disk."
+                               FontSize="10" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="20,4,0,16"/>
+
+                    <TextBlock Text="DEFAULTS FOR NEW DRAWERS" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="Max clips" FontSize="11" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource FieldTextBox}" Width="52" FontSize="11" Margin="6,0,16,0"
+                                 Text="{Binding DefaultMaxClips, UpdateSourceTrigger=LostFocus}"/>
+                        <TextBlock Text="Max MB" FontSize="11" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource FieldTextBox}" Width="52" FontSize="11" Margin="6,0,0,0"
+                                 Text="{Binding DefaultMaxSizeMB, UpdateSourceTrigger=LostFocus}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="HOTKEY" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="Ctrl + Alt + V  —  show or hide the sidebar" FontSize="12"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Text="⚠ The hotkey could not be registered (another app owns it)."
+                               FontSize="11" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,4,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HotkeyRegistered}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <Button Content="Quit Clip Yourself" Style="{StaticResource DangerButton}"
+                            HorizontalAlignment="Left" Margin="0,26,0,0"
+                            Command="{Binding ExitCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===== Status toast ===== -->
+        <Border Grid.Row="0" Grid.RowSpan="4" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,20" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource AccentBrush}"
+                BorderThickness="1" CornerRadius="14" Padding="14,6" IsHitTestVisible="False"
+                Visibility="{Binding StatusText, Converter={StaticResource NullToVis}}">
+            <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{StaticResource TextBrush}"/>
+        </Border>
+    </Grid>
+</Window>

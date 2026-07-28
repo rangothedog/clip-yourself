@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/extension/">
+    <Project Path="extension/ClipYourself.Extension.esproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ClipYourself.Core/ClipYourself.Core.csproj" />
+    <Project Path="src/ClipYourself.Desktop/ClipYourself.Desktop.csproj" />
+  </Folder>
+</Solution>
