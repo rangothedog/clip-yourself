@@ -297,18 +297,43 @@ public class MainViewModel : INotifyPropertyChanged
 
     // ----- drag & drop -----
 
-    /// <summary>Files dropped onto the sidebar (or onto a specific drawer row).</summary>
+    /// <summary>
+    /// Files dropped onto the sidebar (or onto a specific drawer row).
+    /// Media files become individual rich clips (waveform / thumbnail);
+    /// everything else in the drop — including folders — becomes one
+    /// bundled Files clip so the selection stays together.
+    /// </summary>
     public void AddDroppedFiles(string[] paths, Drawer? target)
     {
         target ??= OpenDrawer ?? SessionDrawer;
         var added = 0;
+        var bundle = new List<string>();
+
         foreach (var path in paths)
         {
-            var item = ClipCapture.FromFile(_storage, path);
-            if (item == null) continue;
-            DrawerOps.AddClip(target, item);
-            added++;
+            if (File.Exists(path) && ClipCapture.IsMediaFile(path))
+            {
+                var item = ClipCapture.FromFile(_storage, path);
+                if (item == null) continue;
+                DrawerOps.AddClip(target, item);
+                added++;
+            }
+            else if (File.Exists(path) || Directory.Exists(path))
+            {
+                bundle.Add(path);
+            }
         }
+
+        if (bundle.Count > 0)
+        {
+            var item = ClipCapture.FromPathList(bundle);
+            if (item != null)
+            {
+                DrawerOps.AddClip(target, item);
+                added++;
+            }
+        }
+
         if (added > 0)
         {
             ShowStatus(added == 1 ? $"Clipped into {target.Name}" : $"{added} clips added to {target.Name}");
@@ -378,7 +403,7 @@ public class MainViewModel : INotifyPropertyChanged
                     break;
 
                 case ClipKind.Files:
-                    var existing = clip.FilePaths.Where(File.Exists).ToArray();
+                    var existing = clip.FilePaths.Where(p => File.Exists(p) || Directory.Exists(p)).ToArray();
                     if (existing.Length > 0)
                     {
                         var list = new System.Collections.Specialized.StringCollection();

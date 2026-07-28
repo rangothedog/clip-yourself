@@ -39,6 +39,13 @@ public static class ClipCapture
         return null;
     }
 
+    /// <summary>True for files the sidebar gives rich previews (waveform / thumbnail).</summary>
+    public static bool IsMediaFile(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return AudioExtensions.Contains(ext) || ImageExtensions.Contains(ext);
+    }
+
     /// <summary>Builds a clip from a file dropped onto the sidebar (bypasses the clipboard).</summary>
     public static ClipItem? FromFile(StorageService storage, string path)
     {
@@ -48,12 +55,20 @@ public static class ClipCapture
             var ext = Path.GetExtension(path);
             if (AudioExtensions.Contains(ext)) return CaptureAudioFile(storage, path);
             if (ImageExtensions.Contains(ext)) return CaptureImageFile(storage, path);
-            return CaptureFileList(new List<string> { path });
+            return FromPathList(new List<string> { path });
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>One bundled Files clip for a set of files and/or folders.</summary>
+    public static ClipItem? FromPathList(List<string> paths)
+    {
+        var existing = paths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
+        if (existing.Count == 0) return null;
+        return CaptureFileList(existing);
     }
 
     /// <summary>Builds a clip from text dropped onto the sidebar.</summary>
@@ -64,10 +79,11 @@ public static class ClipCapture
     {
         if (Clipboard.ContainsFileDropList())
         {
-            var paths = Clipboard.GetFileDropList().Cast<string>().Where(File.Exists).ToList();
+            var paths = Clipboard.GetFileDropList().Cast<string>()
+                .Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
             if (paths.Count == 0) return null;
 
-            if (paths.Count == 1)
+            if (paths.Count == 1 && File.Exists(paths[0]))
             {
                 var ext = Path.GetExtension(paths[0]);
                 if (AudioExtensions.Contains(ext)) return CaptureAudioFile(storage, paths[0]);
@@ -197,13 +213,18 @@ public static class ClipCapture
 
     private static ClipItem CaptureFileList(List<string> paths)
     {
-        var names = paths.Select(Path.GetFileName);
+        var names = paths.Select(p => Directory.Exists(p)
+            ? Path.GetFileName(Path.TrimEndingDirectorySeparator(p)) + "\\"
+            : Path.GetFileName(p));
+        var joined = string.Join(", ", names);
+        var preview = paths.Count > 1 ? $"{paths.Count} items — {joined}" : joined;
         return new ClipItem
         {
             Kind = ClipKind.Files,
-            PreviewText = MakePreview(string.Join(", ", names)),
+            PreviewText = MakePreview(preview),
             FilePaths = paths,
-            Hash = ClipHasher.HashPaths(paths),
+            // Order-independent hash so re-copying the same selection dedups.
+            Hash = ClipHasher.HashPaths(paths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)),
             SizeBytes = 0,
             LastCopiedAt = DateTime.Now
         };

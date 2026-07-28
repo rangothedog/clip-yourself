@@ -55,7 +55,8 @@ public static class ClipboardWriter
                 break;
 
             case ClipKind.Files:
-                var existing = clip.FilePaths.Where(File.Exists).ToArray();
+                var existing = clip.FilePaths
+                    .Where(p => File.Exists(p) || Directory.Exists(p)).ToArray();
                 if (existing.Length == 0) throw new FileNotFoundException("Original files no longer exist.");
                 SetFileDrop(existing);
                 break;
