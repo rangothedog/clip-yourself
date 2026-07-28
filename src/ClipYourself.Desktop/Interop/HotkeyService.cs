@@ -4,29 +4,44 @@ using System.Windows.Interop;
 
 namespace ClipYourself.Desktop.Interop;
 
-/// <summary>Registers the global Ctrl+Alt+V hotkey that summons the sidebar.</summary>
+/// <summary>Registers the configurable global hotkey that summons the sidebar.</summary>
 public sealed class HotkeyService : IDisposable
 {
     private const int WM_HOTKEY = 0x0312;
     private const int HotkeyId = 0xC11F;
-    private const uint MOD_ALT = 0x0001;
-    private const uint MOD_CONTROL = 0x0002;
-    private const uint VK_V = 0x56;
 
     private readonly HwndSource _source;
     private readonly Action _callback;
     private bool _disposed;
 
-    public bool Registered { get; }
+    public bool Registered { get; private set; }
 
-    public HotkeyService(Window window, Action callback)
+    public HotkeyService(Window window, string gesture, Action callback)
     {
         _callback = callback;
         var helper = new WindowInteropHelper(window);
         _source = HwndSource.FromHwnd(helper.EnsureHandle())
                   ?? throw new InvalidOperationException("Window handle unavailable.");
         _source.AddHook(WndProc);
-        Registered = RegisterHotKey(_source.Handle, HotkeyId, MOD_CONTROL | MOD_ALT, VK_V);
+        Registered = Register(gesture);
+    }
+
+    /// <summary>Swaps the registered combo; returns false (and leaves nothing registered) on failure.</summary>
+    public bool TryRebind(string gesture)
+    {
+        if (Registered)
+        {
+            UnregisterHotKey(_source.Handle, HotkeyId);
+            Registered = false;
+        }
+        Registered = Register(gesture);
+        return Registered;
+    }
+
+    private bool Register(string gesture)
+    {
+        if (!HotkeyGesture.TryParse(gesture, out var modifiers, out var vk)) return false;
+        return RegisterHotKey(_source.Handle, HotkeyId, modifiers | HotkeyGesture.MOD_NOREPEAT, vk);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

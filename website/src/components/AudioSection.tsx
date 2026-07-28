@@ -27,8 +27,9 @@ export default function AudioSection() {
           </ul>
           <p className="audio__honest">
             Honest footnote: most DAWs keep copied audio on an internal
-            clipboard the OS never sees — which is exactly why DAW Bridge is on
-            the way.
+            clipboard the OS never sees — which is exactly why{" "}
+            <a href="#daw-bridge">DAW Bridge</a> watches your export folders
+            instead.
           </p>
         </Reveal>
         <Reveal className="audio__demo" delay={120}>

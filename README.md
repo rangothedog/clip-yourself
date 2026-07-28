@@ -23,7 +23,8 @@ dotnet run --project src/ClipYourself.Desktop
 ```
 
 - Docks to the right edge as a dark sidebar; drag the header to move it, 📌 toggles always-on-top.
-- **Ctrl+Alt+V** shows/hides the sidebar from anywhere (global hotkey). Closing/hiding keeps it running; quit from Settings.
+- **Ctrl+Alt+V** shows/hides the sidebar from anywhere — configurable in Settings (click the hotkey box, press a new combo). Closing/hiding keeps it running; quit from Settings.
+- **DAW Bridge**: in Settings, watch the folders your DAW exports to; new audio files are clipped automatically once the DAW finishes writing them (works with Audacity, REAPER, Pro Tools "Export Clips as Files", and anything else that saves to disk).
 - Captures clipboard changes automatically: text, images (screenshots or copied image files), copied audio files (with waveform + play/pause + click-to-seek), and generic file lists.
 - Duplicate copies aren't shown twice — the existing clip just jumps back to the top.
 - ➕ Drawer starts a new drawer and opens its "movie reel" view; while a drawer is open, new copies land in it. Rename by clicking any drawer/session name. Per-drawer max clips / max MB are enforced by evicting the oldest clips.
@@ -54,5 +55,4 @@ npm run build   # static site in website/dist — host anywhere
 This is a working prototype:
 
 - Waveform decoding covers common formats (mp3/wav/etc. via NAudio); unsupported codecs fall back gracefully.
-- The global hotkey is fixed at Ctrl+Alt+V for now.
 - A Chrome side-panel extension was prototyped and parked: browsers can't observe the OS clipboard, so it could only capture page-scoped copy events — the desktop app already captures browser copies via the Windows clipboard, making the extension redundant. The code stays in `extension/` for reference.

@@ -39,6 +39,9 @@ public static class ClipCapture
         return null;
     }
 
+    public static bool IsAudioFile(string path)
+        => AudioExtensions.Contains(Path.GetExtension(path));
+
     /// <summary>True for files the sidebar gives rich previews (waveform / thumbnail).</summary>
     public static bool IsMediaFile(string path)
     {

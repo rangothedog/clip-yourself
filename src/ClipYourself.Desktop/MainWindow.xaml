@@ -258,10 +258,11 @@
                          ItemTemplate="{StaticResource ClipCardTemplate}"
                          ItemsSource="{Binding SessionDrawer.Clips}"
                          Padding="12,4,12,4"/>
-                <TextBlock Text="Copy anything and it shows up here.&#10;Drop files here to clip them directly.&#10;&#10;Ctrl+Alt+V summons the sidebar from anywhere."
-                           Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
+                <TextBlock Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
                            TextWrapping="Wrap" Margin="30,60,30,0" IsHitTestVisible="False"
-                           Visibility="{Binding SessionDrawer.Clips.Count, Converter={StaticResource ZeroToVisible}}"/>
+                           Visibility="{Binding SessionDrawer.Clips.Count, Converter={StaticResource ZeroToVisible}}">
+                    <Run Text="Copy anything and it shows up here.&#10;Drop files here to clip them directly.&#10;&#10;"/><Run Text="{Binding HotkeyGesture, Mode=OneWay}"/><Run Text=" summons the sidebar from anywhere."/>
+                </TextBlock>
             </Grid>
 
             <!-- Search results -->
@@ -421,8 +422,17 @@
 
                     <TextBlock Text="HOTKEY" FontSize="10" FontWeight="SemiBold"
                                Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,6"/>
-                    <TextBlock Text="Ctrl + Alt + V  —  show or hide the sidebar" FontSize="12"
-                               Foreground="{StaticResource TextBrush}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox Style="{StaticResource FieldTextBox}" Width="150" FontSize="12"
+                                 IsReadOnly="True" Cursor="Hand" CaretBrush="Transparent"
+                                 Text="{Binding HotkeyGesture, Mode=OneWay}"
+                                 ToolTip="Click here, then press the new key combination"
+                                 PreviewKeyDown="HotkeyBox_PreviewKeyDown"/>
+                        <TextBlock Text="click, then press a new combo" FontSize="10"
+                                   Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="Shows or hides the sidebar from anywhere. Needs at least one modifier (Ctrl/Alt/Shift/Win)."
+                               FontSize="10" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                     <TextBlock Text="⚠ The hotkey could not be registered (another app owns it)."
                                FontSize="11" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,4,0,0">
                         <TextBlock.Style>
@@ -436,6 +446,36 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+
+                    <TextBlock Text="DAW BRIDGE" FontSize="10" FontWeight="SemiBold"
+                               Foreground="{StaticResource SubTextBrush}" Margin="0,20,0,6"/>
+                    <TextBlock Text="Most DAWs never put audio on the clipboard — so watch the folders they export to instead. New audio files landing in a watched folder (subfolders included) are clipped automatically once the DAW finishes writing them."
+                               FontSize="10" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding WatchedFolders}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource EdgeBrush}"
+                                        BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding}" FontSize="11" Foreground="{StaticResource TextBrush}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   ToolTip="{Binding}"/>
+                                        <Button Grid.Column="1" Content="✕" Style="{StaticResource DangerIconButton}"
+                                                Width="22" Height="22" FontSize="10" ToolTip="Stop watching"
+                                                Command="{Binding DataContext.RemoveWatchedFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="➕ Watch a folder" Style="{StaticResource AccentButton}"
+                            HorizontalAlignment="Left"
+                            Command="{Binding AddWatchedFolderCommand}"/>
 
                     <Button Content="Quit Clip Yourself" Style="{StaticResource DangerButton}"
                             HorizontalAlignment="Left" Margin="0,26,0,0"

@@ -25,6 +25,7 @@ public class MainViewModel : INotifyPropertyChanged
         Path.Combine(Path.GetTempPath(), "ClipYourself", "drag");
 
     private readonly StorageService _storage;
+    private readonly DawBridgeService _dawBridge;
     private readonly DispatcherTimer _saveTimer;
     private readonly DispatcherTimer _statusTimer;
     private DateTime _suppressCaptureUntil = DateTime.MinValue;
@@ -44,6 +45,12 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>All other drawers (previous sessions, projects, categories…).</summary>
     public ObservableCollection<Drawer> Drawers { get; } = new();
 
+    /// <summary>DAW Bridge: folders being watched for exported audio.</summary>
+    public ObservableCollection<string> WatchedFolders { get; } = new();
+
+    /// <summary>Set by App: re-registers the global hotkey, returns success.</summary>
+    public Func<string, bool>? RebindHotkey { get; set; }
+
     public MainViewModel(StorageService storage)
     {
         _storage = storage;
@@ -52,8 +59,9 @@ public class MainViewModel : INotifyPropertyChanged
         // Files handed out via drag are disposable copies; sweep leftovers from prior runs.
         try { if (Directory.Exists(DragTempDir)) Directory.Delete(DragTempDir, true); } catch { }
 
-        var loaded = storage.LoadDrawers();
-        storage.SweepOrphanBlobs(loaded);
+        var loaded = storage.LoadDrawers(out var loadErrors);
+        // Never sweep after a bad load — a quarantined drawer's blobs must survive.
+        if (!loadErrors) storage.SweepOrphanBlobs(loaded);
         foreach (var drawer in loaded)
         {
             Drawers.Add(drawer);
@@ -86,7 +94,16 @@ public class MainViewModel : INotifyPropertyChanged
         ExitCommand = new RelayCommand(_ => App.ExitApp());
         TogglePinCommand = new RelayCommand(p => { if (p is ClipItem c) TogglePin(c); });
         ClearSearchCommand = new RelayCommand(_ => SearchText = string.Empty);
+        AddWatchedFolderCommand = new RelayCommand(_ => AddWatchedFolder());
+        RemoveWatchedFolderCommand = new RelayCommand(p => { if (p is string folder) RemoveWatchedFolder(folder); });
+
+        foreach (var folder in Settings.WatchedFolders) WatchedFolders.Add(folder);
+        _dawBridge = new DawBridgeService(OnBridgeAudioReady);
+        _dawBridge.UpdateFolders(WatchedFolders);
     }
+
+    /// <summary>Called on app exit; stops the folder watchers.</summary>
+    public void Shutdown() => _dawBridge.Dispose();
 
     public RelayCommand NewDrawerCommand { get; }
     public RelayCommand OpenDrawerCommand { get; }
@@ -99,6 +116,28 @@ public class MainViewModel : INotifyPropertyChanged
     public RelayCommand ExitCommand { get; }
     public RelayCommand TogglePinCommand { get; }
     public RelayCommand ClearSearchCommand { get; }
+    public RelayCommand AddWatchedFolderCommand { get; }
+    public RelayCommand RemoveWatchedFolderCommand { get; }
+
+    /// <summary>The global show/hide combo, e.g. "Ctrl+Alt+V".</summary>
+    public string HotkeyGesture
+    {
+        get => Settings.Hotkey;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value) || Settings.Hotkey == value) return;
+            Settings.Hotkey = value;
+            Raise(nameof(HotkeyGesture));
+            if (RebindHotkey != null)
+            {
+                HotkeyRegistered = RebindHotkey(value);
+                ShowStatus(HotkeyRegistered
+                    ? $"Hotkey set to {value}"
+                    : $"⚠ Could not register {value} — another app owns it");
+            }
+            ScheduleSave();
+        }
+    }
 
     public string SearchText
     {
@@ -308,6 +347,46 @@ public class MainViewModel : INotifyPropertyChanged
         clip.Pinned = !clip.Pinned;
         var owner = FindOwner(clip);
         if (owner != null) DrawerOps.Reposition(owner, clip);
+        ScheduleSave();
+    }
+
+    // ----- DAW Bridge -----
+
+    private void AddWatchedFolder()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Watch a folder for exported audio"
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        var folder = dialog.FolderName;
+        if (WatchedFolders.Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
+        WatchedFolders.Add(folder);
+        SyncWatchedFolders();
+        ShowStatus($"🎚 Watching {Path.GetFileName(Path.TrimEndingDirectorySeparator(folder))} for audio");
+    }
+
+    private void RemoveWatchedFolder(string folder)
+    {
+        WatchedFolders.Remove(folder);
+        SyncWatchedFolders();
+    }
+
+    private void SyncWatchedFolders()
+    {
+        Settings.WatchedFolders = WatchedFolders.ToList();
+        _dawBridge.UpdateFolders(WatchedFolders);
+        ScheduleSave();
+    }
+
+    private void OnBridgeAudioReady(string path)
+    {
+        var item = ClipCapture.FromFile(_storage, path);
+        if (item == null) return;
+        var target = OpenDrawer ?? SessionDrawer;
+        var result = DrawerOps.AddClip(target, item);
+        ReportLimits(target, result, $"🎚 DAW Bridge: {Path.GetFileName(path)}");
         ScheduleSave();
     }
 
@@ -537,15 +616,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void SaveAll()
     {
-        try
+        try { _storage.SaveSettings(Settings); } catch { }
+        if (!Settings.PersistClips) return;
+        foreach (var drawer in AllDrawers())
         {
-            _storage.SaveSettings(Settings);
-            if (!Settings.PersistClips) return;
-            foreach (var drawer in AllDrawers()) _storage.SaveDrawer(drawer);
-        }
-        catch
-        {
-            // Persistence is best-effort; never take the app down over a save.
+            // Per-drawer: one locked or failing file must not abort the rest.
+            try { _storage.SaveDrawer(drawer); } catch { }
         }
     }
 

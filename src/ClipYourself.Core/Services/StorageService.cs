@@ -45,10 +45,15 @@ public class StorageService
     }
 
     public void SaveSettings(AppSettings settings)
-        => File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, JsonOptions));
+        => WriteAtomic(SettingsPath, JsonSerializer.Serialize(settings, JsonOptions));
 
-    public List<Drawer> LoadDrawers()
+    /// <param name="loadErrors">
+    /// True when any drawer file failed to parse. Callers must NOT sweep orphan
+    /// blobs on such a load — the unreadable drawer's blobs would be destroyed.
+    /// </param>
+    public List<Drawer> LoadDrawers(out bool loadErrors)
     {
+        loadErrors = false;
         var drawers = new List<Drawer>();
         foreach (var file in Directory.EnumerateFiles(DrawersDir, "*.json"))
         {
@@ -57,7 +62,13 @@ public class StorageService
                 var drawer = JsonSerializer.Deserialize<Drawer>(File.ReadAllText(file), JsonOptions);
                 if (drawer != null && drawer.Clips.Count > 0) drawers.Add(drawer);
             }
-            catch { /* skip corrupt drawer files */ }
+            catch
+            {
+                // Quarantine instead of silently dropping: the data may be
+                // recoverable, and the flag protects its blobs from the sweep.
+                loadErrors = true;
+                try { File.Move(file, file + ".corrupt", true); } catch { }
+            }
         }
         return drawers.OrderByDescending(d => d.CreatedAt).ToList();
     }
@@ -69,7 +80,18 @@ public class StorageService
             DeleteDrawerFile(drawer.Id);
             return;
         }
-        File.WriteAllText(DrawerPath(drawer.Id), JsonSerializer.Serialize(drawer, JsonOptions));
+        WriteAtomic(DrawerPath(drawer.Id), JsonSerializer.Serialize(drawer, JsonOptions));
+    }
+
+    /// <summary>
+    /// Crash-safe write: a kill mid-save leaves the previous file intact
+    /// instead of a truncated one (File.WriteAllText truncates first).
+    /// </summary>
+    private static void WriteAtomic(string path, string content)
+    {
+        var tmp = path + ".tmp";
+        File.WriteAllText(tmp, content);
+        File.Move(tmp, path, overwrite: true);
     }
 
     public void DeleteDrawerFile(string drawerId)

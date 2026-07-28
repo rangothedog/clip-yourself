@@ -17,24 +17,24 @@ export default function ReelShowcase() {
             <div className="film-strip__frames">
               <figure className="film-frame">
                 <img
-                  src="/screenshots/sidebar.svg"
-                  alt="Screenshot placeholder — the desktop sidebar docked to the screen edge"
+                  src="/screenshots/sidebar.png"
+                  alt="The desktop sidebar docked to the screen edge with text, image, and audio clips"
                   loading="lazy"
                 />
                 <figcaption>Windows sidebar, docked to the edge</figcaption>
               </figure>
               <figure className="film-frame">
                 <img
-                  src="/screenshots/reel.svg"
-                  alt="Screenshot placeholder — a drawer opened as a scrollable movie reel"
+                  src="/screenshots/reel.png"
+                  alt="A drawer opened as a scrollable movie reel of clips"
                   loading="lazy"
                 />
                 <figcaption>A drawer, unrolled as a reel</figcaption>
               </figure>
               <figure className="film-frame">
                 <img
-                  src="/screenshots/search.svg"
-                  alt="Screenshot placeholder — searching across every drawer with pinned clips on top"
+                  src="/screenshots/search.png"
+                  alt="Searching across every drawer with pinned clips on top"
                   loading="lazy"
                 />
                 <figcaption>Search every drawer, pin what matters</figcaption>

@@ -14,5 +14,11 @@ public class AppSettings
     /// <summary>Keep the sidebar above other windows.</summary>
     public bool AlwaysOnTop { get; set; } = true;
 
+    /// <summary>Global show/hide hotkey, e.g. "Ctrl+Alt+V".</summary>
+    public string Hotkey { get; set; } = "Ctrl+Alt+V";
+
+    /// <summary>DAW Bridge: folders watched for newly exported audio files.</summary>
+    public List<string> WatchedFolders { get; set; } = new();
+
     public double SidebarWidth { get; set; } = 380;
 }

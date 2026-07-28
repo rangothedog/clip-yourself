@@ -43,9 +43,10 @@ const FAQS: QA[] = [
       <p>
         Most DAWs — Audacity included — keep copied audio on an internal
         clipboard that the operating system never sees, so no clipboard manager
-        can capture it. For now, drag the audio out or export it and drop the
-        file on the shelf. <strong>DAW Bridge</strong>, coming soon, will close
-        this gap with export watching and scripting companions.
+        can capture it. That&rsquo;s what <strong>DAW Bridge</strong> is for:
+        in Settings, watch the folder your DAW exports to, and every bounce or
+        export is clipped automatically the moment it finishes writing. Drag
+        &amp; drop onto the shelf works too.
       </p>
     ),
   },

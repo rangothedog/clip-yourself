@@ -60,8 +60,9 @@ public partial class App : Application
         _monitor = new ClipboardMonitor(window);
         _monitor.ClipboardChanged += _viewModel.OnClipboardChanged;
 
-        _hotkey = new HotkeyService(window, ToggleSidebar);
+        _hotkey = new HotkeyService(window, _viewModel.Settings.Hotkey, ToggleSidebar);
         _viewModel.HotkeyRegistered = _hotkey.Registered;
+        _viewModel.RebindHotkey = gesture => _hotkey.TryRebind(gesture);
 
         _viewModel.CaptureInitial();
     }
@@ -103,6 +104,7 @@ public partial class App : Application
         IsExiting = true;
 
         _viewModel?.SaveAll();
+        _viewModel?.Shutdown();
         _monitor?.Dispose();
         _hotkey?.Dispose();
         _showEvent?.Set();

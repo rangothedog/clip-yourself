@@ -61,6 +61,13 @@ public partial class MainWindow : Window
 
     private void HideButton_Click(object sender, RoutedEventArgs e) => Hide();
 
+    private void HotkeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        e.Handled = true; // the box never types; it only captures combos
+        var gesture = Interop.HotkeyGesture.FromKeyEvent(e);
+        if (gesture != null && ViewModel is { } vm) vm.HotkeyGesture = gesture;
+    }
+
     // ----- dragging a clip card onto a drawer -----
 
     private void ClipCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
