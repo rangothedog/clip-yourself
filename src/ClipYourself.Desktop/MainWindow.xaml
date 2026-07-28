@@ -22,9 +22,12 @@
 
         <!-- One clipboard entry, used by the sidebar list, the reel, and search results -->
         <DataTemplate x:Key="ClipCardTemplate">
-            <Button Style="{StaticResource CardButton}" ToolTip="Click to copy · drag onto a drawer to file it"
+            <Button Style="{StaticResource CardButton}"
+                    ToolTip="Click to copy · drag onto another clip to reorder, or onto a drawer to file it"
+                    AllowDrop="True"
                     PreviewMouseLeftButtonDown="ClipCard_PreviewMouseLeftButtonDown"
                     PreviewMouseMove="ClipCard_PreviewMouseMove"
+                    DragOver="ClipCard_DragOver" Drop="ClipCard_Drop"
                     Command="{Binding DataContext.CopyClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     CommandParameter="{Binding}">
                 <Grid>

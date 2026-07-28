@@ -92,9 +92,28 @@ public partial class MainWindow : Window
         _dragClip = null;
         if (ViewModel is not { } vm) return;
 
-        // Copy-only: an Explorer drop copies our temp file and can never
-        // relocate a blob or the user's original files.
-        DragDrop.DoDragDrop((DependencyObject)sender, vm.BuildDragData(clip), DragDropEffects.Copy);
+        // Move is for internal reorder/file; Copy is for dropping out to Explorer
+        // (copy-only there, so a shell drop can never relocate a blob or original).
+        DragDrop.DoDragDrop((DependencyObject)sender, vm.BuildDragData(clip),
+            DragDropEffects.Copy | DragDropEffects.Move);
+    }
+
+    // ----- dropping a clip onto another clip reorders it -----
+
+    private void ClipCard_DragOver(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(ClipDragFormat)) return; // let files/media bubble up
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+    }
+
+    private void ClipCard_Drop(object sender, DragEventArgs e)
+    {
+        if (ViewModel is not { } vm) return;
+        if (e.Data.GetData(ClipDragFormat) is not string clipId) return;
+        if ((sender as FrameworkElement)?.DataContext is not ClipItem target) return;
+        vm.ReorderClip(clipId, target);
+        e.Handled = true;
     }
 
     private void DrawerRow_DragOver(object sender, DragEventArgs e)

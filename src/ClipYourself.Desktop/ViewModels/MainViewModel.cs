@@ -634,6 +634,36 @@ public class MainViewModel : INotifyPropertyChanged
         return name.EndsWith(extension, StringComparison.OrdinalIgnoreCase) ? name : name + extension;
     }
 
+    /// <summary>
+    /// Reorders a clip so it lands at another clip's position (drag one clip onto
+    /// another). Within a drawer it's a straight move; across drawers the clip is
+    /// re-homed to the target's drawer at that slot. Handy for arranging shots.
+    /// </summary>
+    public void ReorderClip(string draggedClipId, ClipItem targetClip)
+    {
+        if (draggedClipId == targetClip.Id) return;
+
+        var targetDrawer = AllDrawers().FirstOrDefault(d => d.Clips.Contains(targetClip));
+        var sourceDrawer = AllDrawers().FirstOrDefault(d => d.Clips.Any(c => c.Id == draggedClipId));
+        var dragged = sourceDrawer?.Clips.FirstOrDefault(c => c.Id == draggedClipId);
+        if (targetDrawer == null || sourceDrawer == null || dragged == null) return;
+
+        if (sourceDrawer == targetDrawer)
+        {
+            var from = targetDrawer.Clips.IndexOf(dragged);
+            var to = targetDrawer.Clips.IndexOf(targetClip);
+            if (from < 0 || to < 0 || from == to) return;
+            targetDrawer.Clips.Move(from, to);
+        }
+        else
+        {
+            var to = targetDrawer.Clips.IndexOf(targetClip);
+            sourceDrawer.Clips.Remove(dragged);
+            targetDrawer.Clips.Insert(Math.Clamp(to, 0, targetDrawer.Clips.Count), dragged);
+        }
+        ScheduleSave();
+    }
+
     /// <summary>Files a clip into another drawer (drag-to-drawer). Dedup merges if the target already has it.</summary>
     public void MoveClipToDrawer(string clipId, Drawer target)
     {
