@@ -44,7 +44,14 @@ public static class ClipboardWriter
                 break;
 
             case ClipKind.Audio:
-                SetFileDrop(FirstExisting(clip.AudioPath, clip.FilePaths));
+                var audioPaths = FirstExisting(clip.AudioPath, clip.FilePaths);
+                var data = new DataObject();
+                var files = new StringCollection();
+                files.AddRange(audioPaths);
+                data.SetFileDropList(files);
+                if (Path.GetExtension(audioPaths[0]).Equals(".wav", StringComparison.OrdinalIgnoreCase))
+                    data.SetAudio(File.ReadAllBytes(audioPaths[0]));
+                Clipboard.SetDataObject(data, true);
                 break;
 
             case ClipKind.Files:

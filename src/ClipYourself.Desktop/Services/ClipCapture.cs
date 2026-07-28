@@ -15,7 +15,7 @@ public static class ClipCapture
     private const long MaxImportBytes = 200L * 1024 * 1024;
 
     private static readonly HashSet<string> AudioExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".mp3", ".wav", ".m4a", ".aac", ".wma", ".flac", ".ogg" };
+        { ".mp3", ".wav", ".m4a", ".aac", ".wma", ".flac", ".ogg", ".opus", ".aiff", ".aif", ".mka", ".weba" };
 
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
@@ -53,6 +53,12 @@ public static class ClipCapture
                 if (ImageExtensions.Contains(ext)) return CaptureImageFile(storage, paths[0]);
             }
             return CaptureFileList(paths);
+        }
+
+        if (Clipboard.ContainsAudio())
+        {
+            var audio = CaptureAudioStream(storage);
+            if (audio != null) return audio;
         }
 
         if (Clipboard.ContainsImage())
@@ -114,6 +120,29 @@ public static class ClipCapture
             PreviewText = Path.GetFileName(path),
             ImagePath = storage.SaveBlob(bytes, hash, Path.GetExtension(path).ToLowerInvariant()),
             FilePaths = { path },
+            Hash = hash,
+            SizeBytes = bytes.LongLength,
+            LastCopiedAt = DateTime.Now
+        };
+    }
+
+    /// <summary>Raw CF_WAVE audio placed on the clipboard (sound recorders, some editors).</summary>
+    private static ClipItem? CaptureAudioStream(StorageService storage)
+    {
+        using var stream = Clipboard.GetAudioStream();
+        if (stream == null) return null;
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        var bytes = buffer.ToArray();
+        if (bytes.Length == 0) return null;
+
+        var hash = ClipHasher.HashBytes(bytes);
+        return new ClipItem
+        {
+            Kind = ClipKind.Audio,
+            Text = "Clipboard audio",
+            PreviewText = "Clipboard audio",
+            AudioPath = storage.SaveBlob(bytes, hash, ".wav"),
             Hash = hash,
             SizeBytes = bytes.LongLength,
             LastCopiedAt = DateTime.Now
