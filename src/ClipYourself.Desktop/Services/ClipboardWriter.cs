@@ -77,7 +77,7 @@ public static class ClipboardWriter
         Clipboard.SetFileDropList(collection);
     }
 
-    private static BitmapImage LoadBitmap(string path)
+    internal static BitmapImage LoadBitmap(string path)
     {
         var bitmap = new BitmapImage();
         bitmap.BeginInit();

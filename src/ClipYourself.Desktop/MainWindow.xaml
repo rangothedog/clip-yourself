@@ -12,7 +12,10 @@
         Background="{StaticResource PanelBrush}"
         Topmost="{Binding AlwaysOnTop}"
         BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
-        AllowDrop="True" Drop="Window_Drop">
+        AllowDrop="True" Drop="Window_Drop"
+        PreviewDragOver="Window_PreviewDragOver"
+        PreviewDragLeave="Window_PreviewDragLeave"
+        PreviewDrop="Window_PreviewDrop">
 
     <Window.Resources>
 
@@ -406,6 +409,22 @@
                     <Button Content="Quit Clip Yourself" Style="{StaticResource DangerButton}"
                             HorizontalAlignment="Left" Margin="0,26,0,0"
                             Command="{Binding ExitCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===== Drop-to-clip overlay ===== -->
+        <Border x:Name="DropOverlay" Grid.Row="0" Grid.RowSpan="5" Background="#CC14161A"
+                IsHitTestVisible="False" Visibility="Collapsed">
+            <Grid>
+                <Rectangle Margin="10" Stroke="{StaticResource AccentBrush}" StrokeThickness="2"
+                           StrokeDashArray="5 3" RadiusX="10" RadiusY="10"/>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="📎" FontSize="34" TextAlignment="Center"/>
+                    <TextBlock Text="Drop to clip" FontSize="16" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}" TextAlignment="Center" Margin="0,8,0,2"/>
+                    <TextBlock Text="drop on a drawer row to file it there" FontSize="11"
+                               Foreground="{StaticResource SubTextBrush}" TextAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Border>

@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
+using System.Text;
+using System.Windows;
 using System.Windows.Threading;
 using ClipYourself.Core.Models;
 using ClipYourself.Core.Services;
@@ -11,6 +13,17 @@ namespace ClipYourself.Desktop.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
+    /// <summary>Custom drag format used to file clips into drawers inside the app.</summary>
+    public const string ClipDragFormat = "ClipYourself.ClipId";
+
+    /// <summary>Practical CF_WAVE ceiling — Windows rejects large in-RAM wave payloads.</summary>
+    private const long MaxWaveClipboardBytes = 25L * 1024 * 1024;
+
+    private const long MaxDragTempCopyBytes = 50L * 1024 * 1024;
+
+    private static readonly string DragTempDir =
+        Path.Combine(Path.GetTempPath(), "ClipYourself", "drag");
+
     private readonly StorageService _storage;
     private readonly DispatcherTimer _saveTimer;
     private readonly DispatcherTimer _statusTimer;
@@ -34,6 +47,9 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _storage = storage;
         Settings = storage.LoadSettings();
+
+        // Files handed out via drag are disposable copies; sweep leftovers from prior runs.
+        try { if (Directory.Exists(DragTempDir)) Directory.Delete(DragTempDir, true); } catch { }
 
         var loaded = storage.LoadDrawers();
         storage.SweepOrphanBlobs(loaded);
@@ -293,6 +309,110 @@ public class MainViewModel : INotifyPropertyChanged
         DrawerOps.AddClip(target, item);
         ShowStatus($"Clipped into {target.Name}");
         ScheduleSave();
+    }
+
+    /// <summary>
+    /// Builds the DataObject for dragging a clip OUT of the sidebar. Besides the
+    /// internal filing format, it carries shell-pasteable content: a friendly-named
+    /// temp file (CF_HDROP), plus text / bitmap / wave data where applicable.
+    /// Drops are copy-only, so targets can never relocate blobs or originals.
+    /// </summary>
+    public DataObject BuildDragData(ClipItem clip)
+    {
+        var data = new DataObject();
+        data.SetData(ClipDragFormat, clip.Id);
+        try
+        {
+            switch (clip.Kind)
+            {
+                case ClipKind.Text:
+                    var text = clip.Text ?? clip.PreviewText;
+                    data.SetText(text);
+                    data.SetFileDropList(FileList(WriteDragFile(
+                        clip.Id, MakeFileName(clip.PreviewText, ".txt"), Encoding.UTF8.GetBytes(text))));
+                    break;
+
+                case ClipKind.Image:
+                    if (clip.ImagePath != null && File.Exists(clip.ImagePath))
+                    {
+                        var imageName = clip.FilePaths.Count > 0
+                            ? Path.GetFileName(clip.FilePaths[0])
+                            : MakeFileName("clip-image", Path.GetExtension(clip.ImagePath));
+                        data.SetFileDropList(FileList(CopyDragFile(clip.Id, clip.ImagePath, imageName)));
+                        data.SetImage(ClipboardWriter.LoadBitmap(clip.ImagePath));
+                    }
+                    break;
+
+                case ClipKind.Audio:
+                    var source = clip.AudioPath != null && File.Exists(clip.AudioPath)
+                        ? clip.AudioPath
+                        : clip.FilePaths.FirstOrDefault(File.Exists);
+                    if (source != null)
+                    {
+                        var info = new FileInfo(source);
+                        var path = info.Length <= MaxDragTempCopyBytes
+                            ? CopyDragFile(clip.Id, source, MakeFileName(clip.Text ?? "clip-audio", Path.GetExtension(source)))
+                            : source;
+                        data.SetFileDropList(FileList(path));
+                        if (info.Length <= MaxWaveClipboardBytes &&
+                            Path.GetExtension(path).Equals(".wav", StringComparison.OrdinalIgnoreCase))
+                        {
+                            data.SetAudio(File.ReadAllBytes(path));
+                        }
+                    }
+                    break;
+
+                case ClipKind.Files:
+                    var existing = clip.FilePaths.Where(File.Exists).ToArray();
+                    if (existing.Length > 0)
+                    {
+                        var list = new System.Collections.Specialized.StringCollection();
+                        list.AddRange(existing);
+                        data.SetFileDropList(list);
+                    }
+                    break;
+            }
+        }
+        catch
+        {
+            // Fall back to an internal-only drag rather than failing the gesture.
+        }
+        return data;
+    }
+
+    private static string WriteDragFile(string clipId, string fileName, byte[] bytes)
+    {
+        var dir = Path.Combine(DragTempDir, clipId);
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, fileName);
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
+
+    private static string CopyDragFile(string clipId, string sourcePath, string fileName)
+    {
+        var dir = Path.Combine(DragTempDir, clipId);
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, fileName);
+        if (!File.Exists(path)) File.Copy(sourcePath, path);
+        return path;
+    }
+
+    private static System.Collections.Specialized.StringCollection FileList(string path)
+    {
+        var list = new System.Collections.Specialized.StringCollection { path };
+        return list;
+    }
+
+    private static string MakeFileName(string basis, string extension)
+    {
+        var name = new string(basis.Trim()
+            .Select(c => Path.GetInvalidFileNameChars().Contains(c) || c == '\n' || c == '\r' ? '_' : c)
+            .ToArray());
+        if (name.Length > 40) name = name[..40].Trim();
+        if (name.Length == 0) name = "clip";
+        if (string.IsNullOrEmpty(extension)) extension = ".dat";
+        return name.EndsWith(extension, StringComparison.OrdinalIgnoreCase) ? name : name + extension;
     }
 
     /// <summary>Files a clip into another drawer (drag-to-drawer). Dedup merges if the target already has it.</summary>
