@@ -8,43 +8,72 @@ namespace ClipYourself.Core.Services;
 /// </summary>
 public static class DrawerOps
 {
+    public sealed class AddClipResult
+    {
+        public List<ClipItem> Evicted { get; } = new();
+
+        /// <summary>True when the drawer still exceeds its limits after eviction
+        /// (the incoming batch itself is bigger than the caps).</summary>
+        public bool OverLimit { get; set; }
+    }
+
     /// <summary>
     /// Adds a clip with smart dedup: an identical clip is moved back to the top
     /// (or left in place if pinned) instead of being duplicated. Enforces the
     /// drawer's limits by evicting the oldest unpinned clips.
     /// </summary>
-    /// <returns>The clips that were evicted (so callers can clean up blobs).</returns>
-    public static List<ClipItem> AddClip(Drawer drawer, ClipItem item)
+    public static AddClipResult AddClip(Drawer drawer, ClipItem item)
+        => AddClipRange(drawer, new[] { item });
+
+    /// <summary>
+    /// Adds a batch of clips. Clips from the same batch never evict each other —
+    /// a multi-file drop must arrive whole even if it blows past the drawer's
+    /// size cap; the result flags OverLimit so the UI can say so.
+    /// </summary>
+    public static AddClipResult AddClipRange(Drawer drawer, IEnumerable<ClipItem> items)
     {
-        var evicted = new List<ClipItem>();
+        var result = new AddClipResult();
+        var protectedClips = new HashSet<ClipItem>();
 
-        var existingIndex = -1;
-        for (var i = 0; i < drawer.Clips.Count; i++)
+        foreach (var item in items)
         {
-            if (drawer.Clips[i].Hash == item.Hash) { existingIndex = i; break; }
+            var existingIndex = IndexOfHash(drawer, item.Hash);
+            if (existingIndex >= 0)
+            {
+                var existing = drawer.Clips[existingIndex];
+                existing.LastCopiedAt = DateTime.Now;
+                MoveToTopOfUnpinned(drawer, existingIndex);
+                protectedClips.Add(existing);
+            }
+            else
+            {
+                drawer.Clips.Insert(LeadingPinnedCount(drawer), item);
+                protectedClips.Add(item);
+            }
         }
-
-        if (existingIndex >= 0)
-        {
-            var existing = drawer.Clips[existingIndex];
-            existing.LastCopiedAt = DateTime.Now;
-            MoveToTopOfUnpinned(drawer, existingIndex);
-            return evicted;
-        }
-
-        drawer.Clips.Insert(LeadingPinnedCount(drawer), item);
 
         while (drawer.Clips.Count > drawer.MaxClips)
         {
-            if (!TryEvictOldest(drawer, evicted)) break;
+            if (!TryEvictOldest(drawer, result.Evicted, protectedClips)) break;
         }
 
-        while (drawer.TotalSizeBytes > drawer.MaxSizeBytes && CountUnpinned(drawer) > 1)
+        while (drawer.TotalSizeBytes > drawer.MaxSizeBytes)
         {
-            if (!TryEvictOldest(drawer, evicted)) break;
+            if (!TryEvictOldest(drawer, result.Evicted, protectedClips)) break;
         }
 
-        return evicted;
+        result.OverLimit = drawer.Clips.Count > drawer.MaxClips
+                           || drawer.TotalSizeBytes > drawer.MaxSizeBytes;
+        return result;
+    }
+
+    private static int IndexOfHash(Drawer drawer, string hash)
+    {
+        for (var i = 0; i < drawer.Clips.Count; i++)
+        {
+            if (drawer.Clips[i].Hash == hash) return i;
+        }
+        return -1;
     }
 
     /// <summary>Refresh a clip's timestamp and bubble it to the top of the unpinned block.</summary>
@@ -90,16 +119,14 @@ public static class DrawerOps
         return count;
     }
 
-    private static int CountUnpinned(Drawer drawer)
-        => drawer.Clips.Count(c => !c.Pinned);
-
-    private static bool TryEvictOldest(Drawer drawer, List<ClipItem> evicted)
+    private static bool TryEvictOldest(Drawer drawer, List<ClipItem> evicted, HashSet<ClipItem> protectedClips)
     {
         for (var i = drawer.Clips.Count - 1; i >= 0; i--)
         {
-            if (!drawer.Clips[i].Pinned)
+            var candidate = drawer.Clips[i];
+            if (!candidate.Pinned && !protectedClips.Contains(candidate))
             {
-                evicted.Add(drawer.Clips[i]);
+                evicted.Add(candidate);
                 drawer.Clips.RemoveAt(i);
                 return true;
             }

@@ -252,9 +252,25 @@ public class MainViewModel : INotifyPropertyChanged
         if (item == null) return;
 
         var target = OpenDrawer ?? SessionDrawer;
-        var evicted = DrawerOps.AddClip(target, item);
-        if (evicted.Count > 0) _storage.SweepOrphanBlobs(AllDrawers());
+        var result = DrawerOps.AddClip(target, item);
+        ReportLimits(target, result);
         ScheduleSave();
+    }
+
+    /// <summary>Limit enforcement must never be silent — clips disappearing reads as a bug.</summary>
+    private void ReportLimits(Drawer target, DrawerOps.AddClipResult result, string? prefix = null)
+    {
+        if (result.Evicted.Count > 0) _storage.SweepOrphanBlobs(AllDrawers());
+
+        var warning =
+            result.Evicted.Count > 0
+                ? $"⚠ {target.Name}: {result.Evicted.Count} oldest clip{(result.Evicted.Count == 1 ? "" : "s")} evicted (limit {target.MaxSizeMB} MB / {target.MaxClips} clips)"
+            : result.OverLimit
+                ? $"⚠ {target.Name} is over its {target.MaxSizeMB} MB limit — raise Max MB or remove clips"
+            : null;
+
+        if (warning != null) ShowStatus(prefix == null ? warning : $"{prefix} · {warning}");
+        else if (prefix != null) ShowStatus(prefix);
     }
 
     // ----- clip actions -----
@@ -306,7 +322,7 @@ public class MainViewModel : INotifyPropertyChanged
     public void AddDroppedFiles(string[] paths, Drawer? target)
     {
         target ??= OpenDrawer ?? SessionDrawer;
-        var added = 0;
+        var newItems = new List<ClipItem>();
         var bundle = new List<string>();
 
         foreach (var path in paths)
@@ -314,9 +330,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (File.Exists(path) && ClipCapture.IsMediaFile(path))
             {
                 var item = ClipCapture.FromFile(_storage, path);
-                if (item == null) continue;
-                DrawerOps.AddClip(target, item);
-                added++;
+                if (item != null) newItems.Add(item);
             }
             else if (File.Exists(path) || Directory.Exists(path))
             {
@@ -327,18 +341,18 @@ public class MainViewModel : INotifyPropertyChanged
         if (bundle.Count > 0)
         {
             var item = ClipCapture.FromPathList(bundle);
-            if (item != null)
-            {
-                DrawerOps.AddClip(target, item);
-                added++;
-            }
+            if (item != null) newItems.Add(item);
         }
 
-        if (added > 0)
-        {
-            ShowStatus(added == 1 ? $"Clipped into {target.Name}" : $"{added} clips added to {target.Name}");
-            ScheduleSave();
-        }
+        if (newItems.Count == 0) return;
+
+        // One batch: files dropped together never evict each other.
+        var result = DrawerOps.AddClipRange(target, newItems);
+        var prefix = newItems.Count == 1
+            ? $"Clipped into {target.Name}"
+            : $"{newItems.Count} clips added to {target.Name}";
+        ReportLimits(target, result, prefix);
+        ScheduleSave();
     }
 
     public void AddDroppedText(string text, Drawer? target)
@@ -463,8 +477,8 @@ public class MainViewModel : INotifyPropertyChanged
         if (owner == null || clip == null || owner == target) return;
 
         owner.Clips.Remove(clip);
-        DrawerOps.AddClip(target, clip);
-        ShowStatus($"Moved to {target.Name}");
+        var result = DrawerOps.AddClip(target, clip);
+        ReportLimits(target, result, $"Moved to {target.Name}");
         ScheduleSave();
     }
 

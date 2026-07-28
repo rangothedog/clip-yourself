@@ -9,7 +9,7 @@ public class Drawer : INotifyPropertyChanged
 {
     private string _name = string.Empty;
     private int _maxClips = 200;
-    private int _maxSizeMB = 50;
+    private int _maxSizeMB = 250;
     private ObservableCollection<ClipItem> _clips = new();
 
     public Drawer()

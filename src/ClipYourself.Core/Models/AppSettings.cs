@@ -7,7 +7,9 @@ public class AppSettings
 
     public int DefaultMaxClips { get; set; } = 200;
 
-    public int DefaultMaxSizeMB { get; set; } = 50;
+    // Generous default: this is an audio-first clipboard manager and a single
+    // WAV master can approach 100 MB.
+    public int DefaultMaxSizeMB { get; set; } = 250;
 
     /// <summary>Keep the sidebar above other windows.</summary>
     public bool AlwaysOnTop { get; set; } = true;
