@@ -709,11 +709,8 @@ kbd {
 
 .film-frame img {
   width: 100%;
-  /* Pin every frame to one aspect ratio so all three are the same height and
-     the captions line up. The screenshots are within ~2% of this already, so
-     the stretch to fill is imperceptible. */
-  aspect-ratio: 61 / 100;
-  object-fit: fill;
+  /* Screenshots are all identical dimensions, so natural sizing already gives
+     equal height and aligned captions. */
   display: block;
   border-radius: 8px;
   border: 1px solid var(--border);
