@@ -1,0 +1,37 @@
+<UserControl x:Class="ClipYourself.Desktop.Controls.VideoPlayer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MaxHeight="160" HorizontalAlignment="Left">
+    <Border Background="#FF000000" CornerRadius="6" ClipToBounds="True">
+        <Grid x:Name="Root" Cursor="Hand" Background="Transparent"
+              MouseLeftButtonUp="Root_MouseLeftButtonUp">
+            <MediaElement x:Name="Media"
+                          LoadedBehavior="Manual" UnloadedBehavior="Manual"
+                          ScrubbingEnabled="True" Stretch="Uniform"
+                          MinWidth="120" MinHeight="72"
+                          MediaOpened="Media_MediaOpened"
+                          MediaEnded="Media_MediaEnded"
+                          MediaFailed="Media_MediaFailed"/>
+
+            <!-- Play / pause overlay -->
+            <Border x:Name="PlayBadge" Width="42" Height="42" CornerRadius="21"
+                    Background="#99000000" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock x:Name="PlayGlyph" Text="▶" FontSize="16" Foreground="White"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0,0,0"/>
+            </Border>
+
+            <TextBlock x:Name="TimeText" Text="" FontSize="10" Foreground="White"
+                       HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,4"
+                       Background="#88000000" Padding="4,1"/>
+
+            <StackPanel x:Name="Fallback" Visibility="Collapsed" Margin="16"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="🎬" FontSize="24" TextAlignment="Center"/>
+                <TextBlock Text="preview unavailable" FontSize="10" Foreground="#FF9AA3B2"
+                           TextAlignment="Center" Margin="0,4,0,0"/>
+                <TextBlock Text="(codec not installed — the file still copies)" FontSize="9"
+                           Foreground="#FF9AA3B2" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="150"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

@@ -23,6 +23,9 @@ public class ClipItem : INotifyPropertyChanged
     /// <summary>Absolute path to the stored audio blob (or original file if too large to copy).</summary>
     public string? AudioPath { get; set; }
 
+    /// <summary>Absolute path to the video (original file for local clips, blob for fetched ones).</summary>
+    public string? VideoPath { get; set; }
+
     /// <summary>Original file paths for Files clips (and the source path for Audio clips).</summary>
     public List<string> FilePaths { get; set; } = new();
 

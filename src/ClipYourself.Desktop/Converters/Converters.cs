@@ -40,6 +40,8 @@ public static class KindBadge
     public static readonly Brush ImageFg = Freeze("#FF7CE38B");
     public static readonly Brush AudioBg = Freeze("#FF322A4A");
     public static readonly Brush AudioFg = Freeze("#FFC4B5FD");
+    public static readonly Brush VideoBg = Freeze("#FF1F393D");
+    public static readonly Brush VideoFg = Freeze("#FF6FD8DE");
     public static readonly Brush FilesBg = Freeze("#FF3D3323");
     public static readonly Brush FilesFg = Freeze("#FFFFD97A");
 
@@ -60,6 +62,7 @@ public class KindToBadgeTextConverter : IValueConverter
                 ClipKind.Text => "TXT",
                 ClipKind.Image => "IMG",
                 ClipKind.Audio => "AUD",
+                ClipKind.Video => "VID",
                 ClipKind.Files => "FILE",
                 _ => "CLIP"
             }
@@ -78,6 +81,7 @@ public class KindToBadgeBackgroundConverter : IValueConverter
                 ClipKind.Text => KindBadge.TextBg,
                 ClipKind.Image => KindBadge.ImageBg,
                 ClipKind.Audio => KindBadge.AudioBg,
+                ClipKind.Video => KindBadge.VideoBg,
                 ClipKind.Files => KindBadge.FilesBg,
                 _ => KindBadge.TextBg
             }
@@ -96,6 +100,7 @@ public class KindToBadgeForegroundConverter : IValueConverter
                 ClipKind.Text => KindBadge.TextFg,
                 ClipKind.Image => KindBadge.ImageFg,
                 ClipKind.Audio => KindBadge.AudioFg,
+                ClipKind.Video => KindBadge.VideoFg,
                 ClipKind.Files => KindBadge.FilesFg,
                 _ => KindBadge.TextFg
             }
@@ -114,6 +119,7 @@ public class KindToGlyphConverter : IValueConverter
                 ClipKind.Text => "📝",
                 ClipKind.Image => "🖼",
                 ClipKind.Audio => "🎵",
+                ClipKind.Video => "🎬",
                 ClipKind.Files => "📁",
                 _ => "📋"
             }

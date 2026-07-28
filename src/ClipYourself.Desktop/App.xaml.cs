@@ -1,4 +1,6 @@
+using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using ClipYourself.Core.Services;
 using ClipYourself.Desktop.Interop;
 using ClipYourself.Desktop.ViewModels;
@@ -23,6 +25,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Safety net: a resident clipboard manager must not lose its in-memory
+        // clips to a stray UI-thread exception. Log it, save, and stay alive.
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
 
         _mutex = new Mutex(true, MutexName, out _ownsMutex);
         if (!_ownsMutex)
@@ -65,6 +71,21 @@ public partial class App : Application
         _viewModel.RebindHotkey = gesture => _hotkey.TryRebind(gesture);
 
         _viewModel.CaptureInitial();
+    }
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        try
+        {
+            var log = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ClipYourself", "crash.log");
+            File.AppendAllText(log, $"[{DateTime.Now:O}] {e.Exception}\n\n");
+            _viewModel?.SaveAll();
+        }
+        catch { }
+        // Keep the sidebar (and the user's clips) alive rather than crashing.
+        e.Handled = true;
     }
 
     private void ShowSidebar()

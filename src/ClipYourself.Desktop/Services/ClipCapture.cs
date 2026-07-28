@@ -18,7 +18,10 @@ public static class ClipCapture
         { ".mp3", ".wav", ".m4a", ".aac", ".wma", ".flac", ".ogg", ".opus", ".aiff", ".aif", ".mka", ".weba" };
 
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
+        { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff" };
+
+    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".mp4", ".m4v", ".webm", ".mov", ".mkv", ".avi", ".wmv", ".flv", ".mpeg", ".mpg" };
 
     public static ClipItem? TryCapture(StorageService storage)
     {
@@ -39,14 +42,15 @@ public static class ClipCapture
         return null;
     }
 
-    public static bool IsAudioFile(string path)
-        => AudioExtensions.Contains(Path.GetExtension(path));
+    public static bool IsAudioFile(string path) => AudioExtensions.Contains(Path.GetExtension(path));
+    public static bool IsImageFile(string path) => ImageExtensions.Contains(Path.GetExtension(path));
+    public static bool IsVideoFile(string path) => VideoExtensions.Contains(Path.GetExtension(path));
 
-    /// <summary>True for files the sidebar gives rich previews (waveform / thumbnail).</summary>
+    /// <summary>True for files the sidebar gives rich previews (waveform / thumbnail / video).</summary>
     public static bool IsMediaFile(string path)
     {
         var ext = Path.GetExtension(path);
-        return AudioExtensions.Contains(ext) || ImageExtensions.Contains(ext);
+        return AudioExtensions.Contains(ext) || ImageExtensions.Contains(ext) || VideoExtensions.Contains(ext);
     }
 
     /// <summary>Builds a clip from a file dropped onto the sidebar (bypasses the clipboard).</summary>
@@ -58,6 +62,7 @@ public static class ClipCapture
             var ext = Path.GetExtension(path);
             if (AudioExtensions.Contains(ext)) return CaptureAudioFile(storage, path);
             if (ImageExtensions.Contains(ext)) return CaptureImageFile(storage, path);
+            if (VideoExtensions.Contains(ext)) return CaptureVideoFile(path);
             return FromPathList(new List<string> { path });
         }
         catch
@@ -144,6 +149,84 @@ public static class ClipCapture
             Kind = ClipKind.Image,
             PreviewText = $"{image.PixelWidth} × {image.PixelHeight} image",
             ImagePath = storage.SaveBlob(bytes, hash, ".png"),
+            Hash = hash,
+            SizeBytes = bytes.LongLength,
+            LastCopiedAt = DateTime.Now
+        };
+    }
+
+    /// <summary>Local video file: reference the original in place (videos are large — no blob copy).</summary>
+    private static ClipItem CaptureVideoFile(string path)
+    {
+        var info = new FileInfo(path);
+        return new ClipItem
+        {
+            Kind = ClipKind.Video,
+            Text = Path.GetFileName(path),
+            PreviewText = Path.GetFileName(path),
+            VideoPath = path,
+            FilePaths = { path },
+            Hash = ClipHasher.HashFile(path),
+            SizeBytes = info.Length,
+            LastCopiedAt = DateTime.Now
+        };
+    }
+
+    /// <summary>Image fetched as raw bytes (e.g. dragged from a browser). Re-encoded to PNG when possible.</summary>
+    public static ClipItem FromImageBytes(StorageService storage, byte[] bytes, string? fileName)
+    {
+        try
+        {
+            using var input = new MemoryStream(bytes);
+            var decoder = BitmapDecoder.Create(input, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames[0];
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(frame));
+            using var output = new MemoryStream();
+            encoder.Save(output);
+            var png = output.ToArray();
+            var hash = ClipHasher.HashBytes(png);
+
+            return new ClipItem
+            {
+                Kind = ClipKind.Image,
+                PreviewText = fileName ?? $"{frame.PixelWidth} × {frame.PixelHeight} image",
+                ImagePath = storage.SaveBlob(png, hash, ".png"),
+                Hash = hash,
+                SizeBytes = png.LongLength,
+                LastCopiedAt = DateTime.Now
+            };
+        }
+        catch
+        {
+            // Unknown codec: keep the original bytes so at least copy-out works.
+            var hash = ClipHasher.HashBytes(bytes);
+            var ext = Path.GetExtension(fileName ?? "").ToLowerInvariant();
+            if (!ImageExtensions.Contains(ext)) ext = ".img";
+            return new ClipItem
+            {
+                Kind = ClipKind.Image,
+                PreviewText = fileName ?? "image",
+                ImagePath = storage.SaveBlob(bytes, hash, ext),
+                Hash = hash,
+                SizeBytes = bytes.LongLength,
+                LastCopiedAt = DateTime.Now
+            };
+        }
+    }
+
+    /// <summary>Video fetched as raw bytes (dragged from a browser). Stored as a blob.</summary>
+    public static ClipItem FromVideoBytes(StorageService storage, byte[] bytes, string? fileName, string extension)
+    {
+        if (string.IsNullOrEmpty(extension) || !VideoExtensions.Contains(extension)) extension = ".mp4";
+        var hash = ClipHasher.HashBytes(bytes);
+        return new ClipItem
+        {
+            Kind = ClipKind.Video,
+            Text = fileName,
+            PreviewText = fileName ?? "video",
+            VideoPath = storage.SaveBlob(bytes, hash, extension),
             Hash = hash,
             SizeBytes = bytes.LongLength,
             LastCopiedAt = DateTime.Now

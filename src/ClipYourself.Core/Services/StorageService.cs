@@ -138,6 +138,7 @@ public class StorageService
         {
             if (clip.ImagePath != null) referenced.Add(Path.GetFileName(clip.ImagePath));
             if (clip.AudioPath != null) referenced.Add(Path.GetFileName(clip.AudioPath));
+            if (clip.VideoPath != null) referenced.Add(Path.GetFileName(clip.VideoPath));
         }
 
         foreach (var file in Directory.EnumerateFiles(BlobsDir))

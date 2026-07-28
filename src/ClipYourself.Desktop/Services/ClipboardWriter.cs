@@ -43,6 +43,10 @@ public static class ClipboardWriter
                 Clipboard.SetImage(LoadBitmap(clip.ImagePath));
                 break;
 
+            case ClipKind.Video:
+                SetFileDrop(FirstExisting(clip.VideoPath, clip.FilePaths));
+                break;
+
             case ClipKind.Audio:
                 var audioPaths = FirstExisting(clip.AudioPath, clip.FilePaths);
                 var data = new DataObject();

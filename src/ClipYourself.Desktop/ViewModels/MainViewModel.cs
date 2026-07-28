@@ -434,6 +434,79 @@ public class MainViewModel : INotifyPropertyChanged
         ScheduleSave();
     }
 
+    /// <summary>
+    /// A media URL dragged from a browser (image or video). Fetches the bytes so the
+    /// image lands on the clipboard as a real image and video gets an inline preview;
+    /// falls back to a text clip of the URL if the download fails or isn't media.
+    /// </summary>
+    public async void FetchAndAddMedia(string url, string? suggestedName, Drawer? target)
+    {
+        target ??= OpenDrawer ?? SessionDrawer;
+        ShowStatus("⏳ Fetching media…");
+
+        MediaFetchService.Fetched? fetched;
+        try { fetched = await MediaFetchService.TryFetchAsync(url); }
+        catch { fetched = null; }
+
+        if (fetched is not { } data)
+        {
+            AddDroppedText(url, target); // couldn't download — keep the link
+            return;
+        }
+
+        // Everything past the await runs on the UI thread; this is async void,
+        // so an escaping exception would crash the app — keep it all guarded.
+        try
+        {
+            var kind = ClassifyMedia(data.ContentType, url);
+            ClipItem? item = kind switch
+            {
+                ClipKind.Image => ClipCapture.FromImageBytes(_storage, data.Bytes, suggestedName),
+                ClipKind.Video => ClipCapture.FromVideoBytes(_storage, data.Bytes, suggestedName, MediaExtension(data.ContentType, url)),
+                _ => null
+            };
+
+            if (item == null)
+            {
+                AddDroppedText(url, target);
+                return;
+            }
+
+            var result = DrawerOps.AddClip(target, item);
+            ReportLimits(target, result, $"Clipped {kind.ToString()!.ToLowerInvariant()} into {target.Name}");
+            ScheduleSave();
+        }
+        catch
+        {
+            AddDroppedText(url, target);
+        }
+    }
+
+    private static ClipKind? ClassifyMedia(string contentType, string url)
+    {
+        contentType = contentType.ToLowerInvariant();
+        if (contentType.StartsWith("image/")) return ClipKind.Image;
+        if (contentType.StartsWith("video/")) return ClipKind.Video;
+
+        var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url;
+        if (ClipCapture.IsImageFile(path)) return ClipKind.Image;
+        if (ClipCapture.IsVideoFile(path)) return ClipKind.Video;
+        return null;
+    }
+
+    private static string MediaExtension(string contentType, string url)
+    {
+        var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url;
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        if (!string.IsNullOrEmpty(ext)) return ext;
+        return contentType.ToLowerInvariant() switch
+        {
+            "video/webm" => ".webm",
+            "video/quicktime" => ".mov",
+            _ => ".mp4"
+        };
+    }
+
     public void AddDroppedText(string text, Drawer? target)
     {
         var item = ClipCapture.FromText(text);
@@ -492,6 +565,19 @@ public class MainViewModel : INotifyPropertyChanged
                         {
                             data.SetAudio(File.ReadAllBytes(path));
                         }
+                    }
+                    break;
+
+                case ClipKind.Video:
+                    var vsource = clip.FilePaths.FirstOrDefault(File.Exists)
+                        ?? (clip.VideoPath != null && File.Exists(clip.VideoPath) ? clip.VideoPath : null);
+                    if (vsource != null)
+                    {
+                        var info = new FileInfo(vsource);
+                        var path = info.Length <= MaxDragTempCopyBytes
+                            ? CopyDragFile(clip.Id, vsource, MakeFileName(clip.Text ?? "clip-video", Path.GetExtension(vsource)))
+                            : vsource;
+                        data.SetFileDropList(FileList(path));
                     }
                     break;
 

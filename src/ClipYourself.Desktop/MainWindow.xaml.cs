@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -98,9 +99,7 @@ public partial class MainWindow : Window
 
     private void DrawerRow_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(ClipDragFormat) || e.Data.GetDataPresent(DataFormats.FileDrop)
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
+        e.Effects = AcceptsDrop(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
@@ -108,25 +107,20 @@ public partial class MainWindow : Window
     {
         if (ViewModel is not { } vm) return;
         if ((sender as FrameworkElement)?.DataContext is not Drawer drawer) return;
-
-        if (e.Data.GetData(ClipDragFormat) is string clipId) vm.MoveClipToDrawer(clipId, drawer);
-        else if (e.Data.GetData(DataFormats.FileDrop) is string[] files) vm.AddDroppedFiles(files, drawer);
+        HandleExternalDrop(e, drawer);
         e.Handled = true;
     }
 
     private void SessionBar_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(ClipDragFormat) || e.Data.GetDataPresent(DataFormats.FileDrop)
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
+        e.Effects = AcceptsDrop(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
     private void SessionBar_Drop(object sender, DragEventArgs e)
     {
         if (ViewModel is not { } vm) return;
-        if (e.Data.GetData(ClipDragFormat) is string clipId) vm.MoveClipToDrawer(clipId, vm.SessionDrawer);
-        else if (e.Data.GetData(DataFormats.FileDrop) is string[] files) vm.AddDroppedFiles(files, vm.SessionDrawer);
+        HandleExternalDrop(e, vm.SessionDrawer);
         e.Handled = true;
     }
 
@@ -134,20 +128,113 @@ public partial class MainWindow : Window
 
     private void Window_Drop(object sender, DragEventArgs e)
     {
-        if (ViewModel is not { } vm) return;
         if (e.Data.GetDataPresent(ClipDragFormat)) return; // internal drag that missed a drawer
-
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] files) vm.AddDroppedFiles(files, null);
-        else if (e.Data.GetData(DataFormats.UnicodeText) is string text) vm.AddDroppedText(text, null);
+        HandleExternalDrop(e, null);
     }
 
+    /// <summary>Routes a drop to the right capture path. Order matters: files, then media URL, then text.</summary>
+    private void HandleExternalDrop(DragEventArgs e, Drawer? target)
+    {
+        if (ViewModel is not { } vm) return;
+
+        if (e.Data.GetData(ClipDragFormat) is string clipId)
+        {
+            vm.MoveClipToDrawer(clipId, target ?? vm.SessionDrawer);
+        }
+        else if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
+        {
+            vm.AddDroppedFiles(files, target);
+        }
+        else if (TryGetMediaUrl(e.Data, out var url, out var name))
+        {
+            // Browser image/video drag: fetch the bytes rather than storing the link.
+            vm.FetchAndAddMedia(url, name, target);
+        }
+        else if (e.Data.GetData(DataFormats.UnicodeText) is string text)
+        {
+            vm.AddDroppedText(text, target);
+        }
+    }
+
+    private static bool AcceptsDrop(IDataObject data)
+        => data.GetDataPresent(ClipDragFormat)
+           || data.GetDataPresent(DataFormats.FileDrop)
+           || data.GetDataPresent("DownloadURL")
+           || data.GetDataPresent(DataFormats.UnicodeText)
+           || data.GetDataPresent("text/x-moz-url");
+
+    /// <summary>
+    /// Extracts a downloadable media URL from a browser drag. Chrome/Edge expose
+    /// "DownloadURL" (mime:filename:url); Firefox uses "text/x-moz-url"; otherwise
+    /// a plain URL that ends in a known media extension counts.
+    /// </summary>
+    private static bool TryGetMediaUrl(IDataObject data, out string url, out string? fileName)
+    {
+        url = "";
+        fileName = null;
+
+        if (data.GetDataPresent("DownloadURL"))
+        {
+            var raw = ReadUnicode(data.GetData("DownloadURL"));
+            var parts = raw.Split(':', 3); // mime : filename : url(with colons)
+            if (parts.Length == 3 && parts[2].StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = string.IsNullOrWhiteSpace(parts[1]) ? null : parts[1];
+                url = parts[2].Trim();
+                return true;
+            }
+        }
+
+        if (data.GetDataPresent("text/x-moz-url"))
+        {
+            var raw = ReadUnicode(data.GetData("text/x-moz-url"));
+            var first = raw.Split('\n', '\r').FirstOrDefault(s => s.StartsWith("http", StringComparison.OrdinalIgnoreCase));
+            if (first != null && LooksLikeMedia(first))
+            {
+                url = first.Trim();
+                return true;
+            }
+        }
+
+        if (data.GetData(DataFormats.UnicodeText) is string text)
+        {
+            var candidate = text.Trim();
+            if (candidate.StartsWith("http", StringComparison.OrdinalIgnoreCase) && LooksLikeMedia(candidate))
+            {
+                url = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool LooksLikeMedia(string url)
+    {
+        var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url;
+        return Services.ClipCapture.IsImageFile(path) || Services.ClipCapture.IsVideoFile(path);
+    }
+
+    private static string ReadUnicode(object? data) => data switch
+    {
+        string s => s,
+        MemoryStream ms => System.Text.Encoding.Unicode.GetString(ms.ToArray()).TrimEnd('\0'),
+        byte[] bytes => System.Text.Encoding.Unicode.GetString(bytes).TrimEnd('\0'),
+        _ => ""
+    };
+
     // ----- "drop to clip" overlay while external content hovers the sidebar -----
+
+    private void Window_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = AcceptsDrop(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
 
     private void Window_PreviewDragOver(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent(ClipDragFormat)) return; // internal filing drag
-        if (!e.Data.GetDataPresent(DataFormats.FileDrop) &&
-            !e.Data.GetDataPresent(DataFormats.UnicodeText)) return;
+        if (!AcceptsDrop(e.Data)) return;
 
         _dropOverlayHideTimer?.Stop();
         DropOverlay.Visibility = Visibility.Visible;

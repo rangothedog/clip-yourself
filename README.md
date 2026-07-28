@@ -25,7 +25,8 @@ dotnet run --project src/ClipYourself.Desktop
 - Docks to the right edge as a dark sidebar; drag the header to move it, 📌 toggles always-on-top.
 - **Ctrl+Alt+V** shows/hides the sidebar from anywhere — configurable in Settings (click the hotkey box, press a new combo). Closing/hiding keeps it running; quit from Settings.
 - **DAW Bridge**: in Settings, watch the folders your DAW exports to; new audio files are clipped automatically once the DAW finishes writing them (works with Audacity, REAPER, Pro Tools "Export Clips as Files", and anything else that saves to disk).
-- Captures clipboard changes automatically: text, images (screenshots or copied image files), copied audio files (with waveform + play/pause + click-to-seek), and generic file lists.
+- Captures clipboard changes automatically: text, images (screenshots or copied image files), copied audio files (with waveform + play/pause + click-to-seek), video files (inline first-frame preview + play), and generic file lists.
+- Drag an image out of a browser onto the sidebar and it's **fetched** and stored as a real image (on the clipboard, not just a link). Drag a video in and it's clipped with an inline preview; the file reference copies/drags back out.
 - Duplicate copies aren't shown twice — the existing clip just jumps back to the top.
 - ➕ Drawer starts a new drawer and opens its "movie reel" view; while a drawer is open, new copies land in it. Rename by clicking any drawer/session name. Per-drawer max clips / max MB are enforced by evicting the oldest clips.
 - 📌 Pin a clip to keep it at the top of its drawer, exempt from auto-eviction.

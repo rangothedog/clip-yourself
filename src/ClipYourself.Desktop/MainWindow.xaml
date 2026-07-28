@@ -12,7 +12,7 @@
         Background="{StaticResource PanelBrush}"
         Topmost="{Binding AlwaysOnTop}"
         BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
-        AllowDrop="True" Drop="Window_Drop"
+        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver"
         PreviewDragOver="Window_PreviewDragOver"
         PreviewDragLeave="Window_PreviewDragLeave"
         PreviewDrop="Window_PreviewDrop">
@@ -55,6 +55,29 @@
                             <TextBlock Text="{Binding PreviewText}" FontSize="11"
                                        Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
                             <controls:WaveformPlayer Source="{Binding AudioPath}" Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Visibility="{Binding Kind, Converter={StaticResource KindToVis}, ConverterParameter='Video'}">
+                            <TextBlock Text="{Binding PreviewText}" FontSize="11"
+                                       Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                            <!-- Only Video clips build a MediaElement (via the template swap below) -->
+                            <ContentControl>
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Video">
+                                                <Setter Property="ContentTemplate">
+                                                    <Setter.Value>
+                                                        <DataTemplate>
+                                                            <controls:VideoPlayer Source="{Binding VideoPath}" Margin="0,4,0,0"/>
+                                                        </DataTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
