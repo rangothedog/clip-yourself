@@ -8,6 +8,9 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of Clip Yourself is already installed."/>
     <MediaTemplate EmbedCab="yes"/>
 
+    <Icon Id="AppIcon" SourceFile="..\src\ClipYourself.Desktop\Assets\Clipyourself.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="AppIcon"/>
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Clip Yourself"/>
     </StandardDirectory>
@@ -24,7 +27,8 @@
                 Name="Clip Yourself"
                 Description="Sidebar clipboard manager for text, images, and sound"
                 Target="[INSTALLFOLDER]ClipYourself.Desktop.exe"
-                WorkingDirectory="INSTALLFOLDER"/>
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon"/>
       <RegistryValue Root="HKCU" Key="Software\ClipYourself" Name="StartMenuShortcut"
                      Type="integer" Value="1" KeyPath="yes"/>
     </Component>

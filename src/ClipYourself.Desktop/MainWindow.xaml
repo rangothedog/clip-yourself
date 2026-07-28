@@ -6,6 +6,7 @@
         xmlns:controls="clr-namespace:ClipYourself.Desktop.Controls"
         mc:Ignorable="d"
         Title="Clip Yourself"
+        Icon="/Assets/Clipyourself.ico"
         Width="380" MinWidth="300" Height="800"
         WindowStyle="None" ResizeMode="CanResize"
         WindowStartupLocation="Manual"
@@ -171,11 +172,8 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="{StaticResource AccentBrush}" CornerRadius="6"
-                            Width="24" Height="24" Margin="0,0,8,0">
-                        <TextBlock Text="📋" FontSize="13" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Image Source="/Assets/Clipyourself.ico" Width="24" Height="24" Margin="0,0,8,0"
+                           RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
                     <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
