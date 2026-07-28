@@ -33,11 +33,11 @@ export default function ReelShowcase() {
               </figure>
               <figure className="film-frame">
                 <img
-                  src="/screenshots/extension.svg"
-                  alt="Screenshot placeholder — the Chrome side panel extension"
+                  src="/screenshots/search.svg"
+                  alt="Screenshot placeholder — searching across every drawer with pinned clips on top"
                   loading="lazy"
                 />
-                <figcaption>Chrome side panel</figcaption>
+                <figcaption>Search every drawer, pin what matters</figcaption>
               </figure>
             </div>
             <div className="film-strip__holes" aria-hidden="true" />

@@ -968,3 +968,10 @@ kbd {
   color: var(--subtext);
   font-size: 0.88rem;
 }
+
+/* Single-platform download layout */
+.download-grid--single {
+  grid-template-columns: minmax(0, 460px);
+  justify-content: center;
+}
+

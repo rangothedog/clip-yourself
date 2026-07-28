@@ -50,11 +50,13 @@ const FAQS: QA[] = [
     ),
   },
   {
-    q: "Do the desktop app and Chrome extension sync?",
+    q: "Is there a browser extension?",
     a: (
       <p>
-        Not yet. Today they&rsquo;re independent — the desktop app covers
-        everything you copy on Windows, and the extension covers the browser.
+        No — and you don&rsquo;t need one. Anything you copy in your browser
+        goes through the Windows clipboard, so the desktop sidebar captures it
+        already. (We prototyped a Chrome side panel, but browsers can&rsquo;t
+        see the OS clipboard, so it could never keep up with the desktop app.)
       </p>
     ),
   },

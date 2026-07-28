@@ -1,10 +1,4 @@
 <Solution>
-  <Folder Name="/extension/">
-    <Project Path="extension/ClipYourself.Extension.esproj">
-      <Build />
-      <Deploy />
-    </Project>
-  </Folder>
   <Folder Name="/installer/">
     <Project Path="installer/ClipYourself.Installer.wixproj" Type="b7dd6f7e-def8-4e67-b5b7-07ef123db6f0">
       <Build Project="false" />

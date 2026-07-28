@@ -11,10 +11,10 @@ export default function Hero() {
             Your clipboard, <span className="accent">remembered.</span>
           </h1>
           <p className="hero__sub">
-            Clip Yourself is a sidebar for Windows and a side panel for Chrome
-            that keeps every copy — text, images, and <strong>sound</strong> —
-            as a living clip you can preview, pin, search, and drag straight
-            back into any app.
+            Clip Yourself is a Windows sidebar that keeps every copy — text,
+            images, and <strong>sound</strong> — as a living clip you can
+            preview, pin, search, and drag straight back into any app. Copy in
+            your browser, your editor, anywhere: it all lands on the shelf.
           </p>
           <div className="hero__ctas">
             <a
@@ -23,8 +23,8 @@ export default function Hero() {
             >
               ⬇ Download for Windows (.msi)
             </a>
-            <a className="btn btn--ghost btn--big" href="#download">
-              Add to Chrome
+            <a className="btn btn--ghost btn--big" href="#features">
+              See what it does
             </a>
           </div>
           <p className="hero__hint">
