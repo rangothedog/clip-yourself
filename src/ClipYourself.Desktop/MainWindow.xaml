@@ -116,11 +116,13 @@
                     <TextBlock Text="🗂" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBox Style="{StaticResource GhostTextBox}" FontSize="12"
-                                 ToolTip="Click to rename"
-                                 Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Style="{StaticResource LinkButton}" FontSize="12"
+                                Content="{Binding Name}"
+                                ToolTip="Open drawer (rename it inside)"
+                                Command="{Binding DataContext.OpenDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"/>
                         <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
-                            <Run Text="{Binding Clips.Count, Mode=OneWay}"/><Run Text=" clips · "/><Run Text="{Binding CreatedAt, Converter={StaticResource RelTime}, Mode=OneWay}"/>
+                            <Run Text="{Binding Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding CreatedAt, Converter={StaticResource RelTime}, Mode=OneWay}"/>
                         </TextBlock>
                     </StackPanel>
 
@@ -184,7 +186,7 @@
                              ToolTip="Click to rename this session"
                              Text="{Binding SessionDrawer.Name, UpdateSourceTrigger=PropertyChanged}"/>
                     <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}" Margin="0,2,0,0">
-                        <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay}"/><Run Text=" clips · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
+                        <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
                     </TextBlock>
                 </StackPanel>
                 <Button Grid.Column="1" Content="➕ Drawer" Style="{StaticResource AccentButton}"
@@ -294,7 +296,7 @@
                                      ToolTip="Click to rename"
                                      Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
-                                <Run Text="{Binding Clips.Count, Mode=OneWay}"/><Run Text=" clips · "/><Run Text="{Binding TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
+                                <Run Text="{Binding Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
                             </TextBlock>
                         </StackPanel>
                         <Button Grid.Column="2" Content="🧹" Style="{StaticResource IconButton}"

@@ -119,6 +119,16 @@ public class NullToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>3 → "3 clips", 1 → "1 clip".</summary>
+public class ClipCountConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is int count ? (count == 1 ? "1 clip" : $"{count} clips") : "";
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>True → Collapsed, False → Visible.</summary>
 public class InverseBoolToVisibilityConverter : IValueConverter
 {

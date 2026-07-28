@@ -15,6 +15,9 @@
     <Project Path="src/ClipYourself.Desktop/ClipYourself.Desktop.csproj" />
   </Folder>
   <Folder Name="/website/">
-    <Project Path="website/ClipYourself.Website.esproj" />
+    <Project Path="website/ClipYourself.Website.esproj">
+      <Build />
+      <Deploy />
+    </Project>
   </Folder>
 </Solution>
