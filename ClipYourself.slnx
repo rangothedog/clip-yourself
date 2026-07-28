@@ -5,8 +5,16 @@
       <Deploy />
     </Project>
   </Folder>
+  <Folder Name="/installer/">
+    <Project Path="installer/ClipYourself.Installer.wixproj" Type="b7dd6f7e-def8-4e67-b5b7-07ef123db6f0">
+      <Build Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/ClipYourself.Core/ClipYourself.Core.csproj" />
     <Project Path="src/ClipYourself.Desktop/ClipYourself.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/website/">
+    <Project Path="website/ClipYourself.Website.esproj" />
   </Folder>
 </Solution>

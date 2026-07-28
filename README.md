@@ -10,6 +10,9 @@ A clipboard manager that lives in a sidebar — for Windows (WPF) and Chrome (si
 | `src/ClipYourself.Core` | .NET 8 class library — models, dedup, drawer limits, JSON + blob persistence |
 | `src/ClipYourself.Desktop` | WPF sidebar app (net8.0-windows, NAudio for waveforms) |
 | `extension/` | Chrome MV3 extension — React + TypeScript + Vite, side panel UI |
+| `website/` | clipyourself.com landing site — React + TypeScript + Vite, static output |
+| `installer/` | WiX v5 MSI installer (self-contained x64, no .NET needed on target) |
+| `docs/` | Research notes (DAW clipboard interop) |
 
 The extension is included in the solution as `ClipYourself.Extension.esproj`; it loads in Visual Studio when the **JavaScript and TypeScript** workload is installed, and is skipped by `dotnet build` on the command line.
 
@@ -45,6 +48,23 @@ Then in Chrome: `chrome://extensions` → enable **Developer mode** → **Load u
 - Same drawer model as the desktop app: session drawers, reel view with film-strip styling, dedup-to-top, per-drawer limits, opt-in persistence (`chrome.storage.local` vs session storage).
 
 See [extension/README.md](extension/README.md) for details.
+
+## Windows installer (MSI)
+
+```powershell
+.\scripts\build-installer.ps1
+```
+
+Publishes the desktop app self-contained (win-x64) and builds `installer/bin/Release/ClipYourself-0.1.0-win-x64.msi` via WiX v5 (restored from NuGet — nothing to install). The MSI installs to Program Files with a Start Menu shortcut, supports major upgrades, and is copied into `website/public/downloads/` for the site's download link. The installer project is in the solution but excluded from normal builds; in Visual Studio it loads with the [HeatWave](https://www.firegiant.com/products/heatwave/) extension.
+
+## Website (clipyourself.com)
+
+```powershell
+cd website
+npm install
+npm run dev     # local preview
+npm run build   # static site in website/dist — host anywhere
+```
 
 ## Status / known limitations
 

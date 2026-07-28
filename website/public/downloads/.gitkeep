@@ -1,0 +1,3 @@
+# Placeholder so the downloads/ folder is committed.
+# CI drops the built installer here as ClipYourself-<version>-win-x64.msi
+# (the site links to /downloads/ClipYourself-0.1.0-win-x64.msi).

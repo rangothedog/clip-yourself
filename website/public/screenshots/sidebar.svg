@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="640" viewBox="0 0 480 640" role="img" aria-label="Screenshot placeholder — sidebar view">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b1e24"/>
+      <stop offset="0.6" stop-color="#20242c"/>
+      <stop offset="1" stop-color="#262b33"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f8cff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#4f8cff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="478" height="638" rx="12" fill="url(#bg)" stroke="#333a45" stroke-width="2"/>
+  <rect x="1" y="1" width="478" height="180" rx="12" fill="url(#glow)"/>
+  <rect x="40" y="250" width="400" height="64" rx="10" fill="#262b33" stroke="#333a45"/>
+  <rect x="40" y="330" width="400" height="64" rx="10" fill="#262b33" stroke="#333a45"/>
+  <rect x="40" y="410" width="400" height="64" rx="10" fill="#262b33" stroke="#4f8cff" stroke-opacity="0.5"/>
+  <text x="240" y="150" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="600" fill="#e8eaed">Screenshot — sidebar view</text>
+  <text x="240" y="185" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#9aa3b2">WPF sidebar · Ctrl+Alt+V</text>
+</svg>

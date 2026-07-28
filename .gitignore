@@ -4,9 +4,11 @@ obj/
 *.user
 .vs/
 
-# Node / extension
+# Node / extension / website
 node_modules/
 extension/dist/
+website/dist/
+website/public/downloads/*.msi
 
 # OS
 Thumbs.db
