@@ -1,11 +1,11 @@
 using System.ComponentModel;
-using System.Text.Json.Serialization;
 
 namespace ClipYourself.Core.Models;
 
 public class ClipItem : INotifyPropertyChanged
 {
     private DateTime _lastCopiedAt;
+    private bool _pinned;
 
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
@@ -32,6 +32,18 @@ public class ClipItem : INotifyPropertyChanged
     public long SizeBytes { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    /// <summary>Pinned clips stay at the top of their drawer and are never evicted by limits.</summary>
+    public bool Pinned
+    {
+        get => _pinned;
+        set
+        {
+            if (_pinned == value) return;
+            _pinned = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pinned)));
+        }
+    }
 
     public DateTime LastCopiedAt
     {

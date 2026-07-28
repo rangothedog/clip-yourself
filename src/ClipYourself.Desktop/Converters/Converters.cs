@@ -119,6 +119,16 @@ public class NullToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>True → Collapsed, False → Visible.</summary>
+public class InverseBoolToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is true ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>Zero (or non-numeric) → Visible; used for empty-state hints.</summary>
 public class ZeroToVisibleConverter : IValueConverter
 {

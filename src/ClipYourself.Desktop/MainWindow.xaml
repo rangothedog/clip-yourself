@@ -11,13 +11,16 @@
         WindowStartupLocation="Manual"
         Background="{StaticResource PanelBrush}"
         Topmost="{Binding AlwaysOnTop}"
-        BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1">
+        BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
+        AllowDrop="True" Drop="Window_Drop">
 
     <Window.Resources>
 
-        <!-- One clipboard entry, used by both the sidebar list and the reel -->
+        <!-- One clipboard entry, used by the sidebar list, the reel, and search results -->
         <DataTemplate x:Key="ClipCardTemplate">
-            <Button Style="{StaticResource CardButton}" ToolTip="Click to copy to clipboard"
+            <Button Style="{StaticResource CardButton}" ToolTip="Click to copy · drag onto a drawer to file it"
+                    PreviewMouseLeftButtonDown="ClipCard_PreviewMouseLeftButtonDown"
+                    PreviewMouseMove="ClipCard_PreviewMouseMove"
                     Command="{Binding DataContext.CopyClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     CommandParameter="{Binding}">
                 <Grid>
@@ -55,19 +58,50 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <Button Grid.Column="2" Content="✕" Style="{StaticResource IconButton}"
-                            Width="22" Height="22" FontSize="10" VerticalAlignment="Top"
-                            ToolTip="Remove this clip"
-                            Command="{Binding DataContext.DeleteClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            CommandParameter="{Binding}"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Content="📌" Width="22" Height="22" FontSize="10"
+                                ToolTip="Pin (stays on top, never auto-evicted)"
+                                Command="{Binding DataContext.TogglePinCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                    <Setter Property="Opacity" Value="0.45"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Pinned}" Value="True">
+                                            <Setter Property="Opacity" Value="1"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Opacity" Value="1"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="✕" Style="{StaticResource IconButton}"
+                                Width="22" Height="22" FontSize="10"
+                                ToolTip="Remove this clip"
+                                Command="{Binding DataContext.DeleteClipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}"/>
+                    </StackPanel>
                 </Grid>
             </Button>
         </DataTemplate>
 
-        <!-- One drawer row in the "Drawers" section -->
+        <!-- A search result: clip card plus the drawer it lives in -->
+        <DataTemplate x:Key="SearchHitTemplate">
+            <StackPanel>
+                <TextBlock Text="{Binding DrawerName}" FontSize="9" FontWeight="SemiBold"
+                           Foreground="{StaticResource AccentBrush}" Margin="2,0,0,2"/>
+                <ContentPresenter Content="{Binding Clip}" ContentTemplate="{StaticResource ClipCardTemplate}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- One drawer row in the "Drawers" section (drop target for filing clips) -->
         <DataTemplate x:Key="DrawerRowTemplate">
             <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource EdgeBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="8,6">
+                    BorderThickness="1" CornerRadius="8" Padding="8,6"
+                    AllowDrop="True" DragOver="DrawerRow_DragOver" Drop="DrawerRow_Drop">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -104,6 +138,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -133,8 +168,9 @@
             </Grid>
         </Border>
 
-        <!-- ===== Session bar ===== -->
-        <Border Grid.Row="1" Padding="12,10,12,6">
+        <!-- ===== Session bar (drop target: file back into session) ===== -->
+        <Border Grid.Row="1" Padding="12,10,12,6"
+                AllowDrop="True" DragOver="SessionBar_DragOver" Drop="SessionBar_Drop">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -154,27 +190,70 @@
             </Grid>
         </Border>
 
-        <!-- ===== Session clips ===== -->
-        <Grid Grid.Row="2">
-            <ListBox Style="{StaticResource FlatListBox}"
-                     ItemContainerStyle="{StaticResource PlainItemStyle}"
-                     ItemTemplate="{StaticResource ClipCardTemplate}"
-                     ItemsSource="{Binding SessionDrawer.Clips}"
-                     Padding="12,4,12,4"/>
-            <TextBlock Text="Copy anything and it shows up here.&#10;&#10;Ctrl+Alt+V summons the sidebar from anywhere."
-                       Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
-                       TextWrapping="Wrap" Margin="30,60,30,0" IsHitTestVisible="False"
-                       Visibility="{Binding SessionDrawer.Clips.Count, Converter={StaticResource ZeroToVisible}}"/>
+        <!-- ===== Search ===== -->
+        <Border Grid.Row="2" Margin="12,2,12,6" Background="#FF20242C"
+                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1" CornerRadius="6" Padding="8,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="🔍" FontSize="11" Foreground="{StaticResource SubTextBrush}"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <Grid Grid.Column="1">
+                    <TextBox Style="{StaticResource GhostTextBox}" FontSize="12" VerticalAlignment="Center"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Search every drawer…" FontSize="12" Foreground="{StaticResource SubTextBrush}"
+                               VerticalAlignment="Center" IsHitTestVisible="False"
+                               Visibility="{Binding IsSearching, Converter={StaticResource InverseBoolToVis}}"/>
+                </Grid>
+                <Button Grid.Column="2" Content="✕" Style="{StaticResource IconButton}"
+                        Width="20" Height="20" FontSize="9" ToolTip="Clear search"
+                        Command="{Binding ClearSearchCommand}"
+                        Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+        </Border>
+
+        <!-- ===== Clip lists ===== -->
+        <Grid Grid.Row="3">
+            <!-- Session clips (hidden while searching) -->
+            <Grid Visibility="{Binding IsSearching, Converter={StaticResource InverseBoolToVis}}">
+                <ListBox Style="{StaticResource FlatListBox}"
+                         ItemContainerStyle="{StaticResource PlainItemStyle}"
+                         ItemTemplate="{StaticResource ClipCardTemplate}"
+                         ItemsSource="{Binding SessionDrawer.Clips}"
+                         Padding="12,4,12,4"/>
+                <TextBlock Text="Copy anything and it shows up here.&#10;Drop files here to clip them directly.&#10;&#10;Ctrl+Alt+V summons the sidebar from anywhere."
+                           Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
+                           TextWrapping="Wrap" Margin="30,60,30,0" IsHitTestVisible="False"
+                           Visibility="{Binding SessionDrawer.Clips.Count, Converter={StaticResource ZeroToVisible}}"/>
+            </Grid>
+
+            <!-- Search results -->
+            <Grid Visibility="{Binding IsSearching, Converter={StaticResource BoolToVis}}">
+                <ListBox Style="{StaticResource FlatListBox}"
+                         ItemContainerStyle="{StaticResource PlainItemStyle}"
+                         ItemTemplate="{StaticResource SearchHitTemplate}"
+                         ItemsSource="{Binding SearchResults}"
+                         Padding="12,4,12,4"/>
+                <TextBlock Text="No clips match."
+                           Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
+                           Margin="30,60,30,0" IsHitTestVisible="False"
+                           Visibility="{Binding SearchResults.Count, Converter={StaticResource ZeroToVisible}}"/>
+            </Grid>
         </Grid>
 
         <!-- ===== Drawers section ===== -->
-        <Border Grid.Row="3" BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0"
+        <Border Grid.Row="4" BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0"
                 Background="{StaticResource BgBrush}" Padding="12,8,12,10">
             <StackPanel>
                 <Grid Margin="0,0,0,6">
                     <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubTextBrush}">
                         <Run Text="DRAWERS ("/><Run Text="{Binding Drawers.Count, Mode=OneWay}"/><Run Text=")"/>
                     </TextBlock>
+                    <TextBlock Text="drag clips here to file them" FontSize="9"
+                               Foreground="{StaticResource SubTextBrush}" HorizontalAlignment="Right"/>
                 </Grid>
                 <ListBox Style="{StaticResource FlatListBox}"
                          ItemContainerStyle="{StaticResource PlainItemStyle}"
@@ -188,7 +267,7 @@
         </Border>
 
         <!-- ===== Reel view overlay (open drawer) ===== -->
-        <Border Grid.Row="0" Grid.RowSpan="4" Background="{StaticResource PanelBrush}"
+        <Border Grid.Row="0" Grid.RowSpan="5" Background="{StaticResource PanelBrush}"
                 Visibility="{Binding OpenDrawer, Converter={StaticResource NullToVis}}">
             <Grid DataContext="{Binding OpenDrawer}">
                 <Grid.RowDefinitions>
@@ -264,7 +343,7 @@
                                  ItemsSource="{Binding Clips}"
                                  Padding="10,10,10,10"/>
                         <Rectangle Grid.Column="2" Fill="{StaticResource SprocketBrush}"/>
-                        <TextBlock Grid.Column="1" Text="This drawer is empty.&#10;Copy something while it's open to fill it."
+                        <TextBlock Grid.Column="1" Text="This drawer is empty.&#10;Copy something while it's open, or drop files here."
                                    Foreground="{StaticResource SubTextBrush}" FontSize="12" TextAlignment="Center"
                                    TextWrapping="Wrap" Margin="30,60,30,0" IsHitTestVisible="False"
                                    Visibility="{Binding Clips.Count, Converter={StaticResource ZeroToVisible}}"/>
@@ -274,7 +353,7 @@
         </Border>
 
         <!-- ===== Settings overlay ===== -->
-        <Border Grid.Row="0" Grid.RowSpan="4" Background="{StaticResource PanelBrush}"
+        <Border Grid.Row="0" Grid.RowSpan="5" Background="{StaticResource PanelBrush}"
                 Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolToVis}}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -332,7 +411,7 @@
         </Border>
 
         <!-- ===== Status toast ===== -->
-        <Border Grid.Row="0" Grid.RowSpan="4" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+        <Border Grid.Row="0" Grid.RowSpan="5" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                 Margin="0,0,0,20" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource AccentBrush}"
                 BorderThickness="1" CornerRadius="14" Padding="14,6" IsHitTestVisible="False"
                 Visibility="{Binding StatusText, Converter={StaticResource NullToVis}}">

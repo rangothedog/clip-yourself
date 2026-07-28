@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.IO;
 using System.Windows.Threading;
 using ClipYourself.Core.Models;
 using ClipYourself.Core.Services;
@@ -19,6 +20,7 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isSettingsOpen;
     private string _statusText = string.Empty;
     private bool _hotkeyRegistered = true;
+    private string _searchText = string.Empty;
 
     public AppSettings Settings { get; }
 
@@ -65,6 +67,8 @@ public class MainViewModel : INotifyPropertyChanged
         CopyClipCommand = new RelayCommand(p => { if (p is ClipItem c) CopyClip(c); });
         ToggleSettingsCommand = new RelayCommand(_ => IsSettingsOpen = !IsSettingsOpen);
         ExitCommand = new RelayCommand(_ => App.ExitApp());
+        TogglePinCommand = new RelayCommand(p => { if (p is ClipItem c) TogglePin(c); });
+        ClearSearchCommand = new RelayCommand(_ => SearchText = string.Empty);
     }
 
     public RelayCommand NewDrawerCommand { get; }
@@ -76,6 +80,47 @@ public class MainViewModel : INotifyPropertyChanged
     public RelayCommand CopyClipCommand { get; }
     public RelayCommand ToggleSettingsCommand { get; }
     public RelayCommand ExitCommand { get; }
+    public RelayCommand TogglePinCommand { get; }
+    public RelayCommand ClearSearchCommand { get; }
+
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText == value) return;
+            _searchText = value;
+            Raise(nameof(SearchText));
+            Raise(nameof(IsSearching));
+            Raise(nameof(SearchResults));
+        }
+    }
+
+    public bool IsSearching => !string.IsNullOrWhiteSpace(_searchText);
+
+    /// <summary>Matches across every drawer (session included), newest first.</summary>
+    public List<SearchHit> SearchResults
+    {
+        get
+        {
+            if (!IsSearching) return new List<SearchHit>();
+            var needle = _searchText.Trim();
+            var hits = new List<SearchHit>();
+            foreach (var drawer in AllDrawers())
+            foreach (var clip in drawer.Clips)
+            {
+                if (Matches(clip, needle)) hits.Add(new SearchHit(clip, drawer.Name));
+            }
+            return hits.OrderByDescending(h => h.Clip.LastCopiedAt).Take(200).ToList();
+        }
+    }
+
+    private static bool Matches(ClipItem clip, string needle)
+    {
+        if (clip.PreviewText.Contains(needle, StringComparison.OrdinalIgnoreCase)) return true;
+        if (clip.Text != null && clip.Text.Contains(needle, StringComparison.OrdinalIgnoreCase)) return true;
+        return clip.FilePaths.Any(p => Path.GetFileName(p).Contains(needle, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>Drawer shown in the reel view; while open it is also the capture target.</summary>
     public Drawer? OpenDrawer
@@ -211,6 +256,58 @@ public class MainViewModel : INotifyPropertyChanged
     private Drawer? FindOwner(ClipItem clip)
         => AllDrawers().FirstOrDefault(d => d.Clips.Contains(clip));
 
+    private void TogglePin(ClipItem clip)
+    {
+        clip.Pinned = !clip.Pinned;
+        var owner = FindOwner(clip);
+        if (owner != null) DrawerOps.Reposition(owner, clip);
+        ScheduleSave();
+    }
+
+    // ----- drag & drop -----
+
+    /// <summary>Files dropped onto the sidebar (or onto a specific drawer row).</summary>
+    public void AddDroppedFiles(string[] paths, Drawer? target)
+    {
+        target ??= OpenDrawer ?? SessionDrawer;
+        var added = 0;
+        foreach (var path in paths)
+        {
+            var item = ClipCapture.FromFile(_storage, path);
+            if (item == null) continue;
+            DrawerOps.AddClip(target, item);
+            added++;
+        }
+        if (added > 0)
+        {
+            ShowStatus(added == 1 ? $"Clipped into {target.Name}" : $"{added} clips added to {target.Name}");
+            ScheduleSave();
+        }
+    }
+
+    public void AddDroppedText(string text, Drawer? target)
+    {
+        var item = ClipCapture.FromText(text);
+        if (item == null) return;
+        target ??= OpenDrawer ?? SessionDrawer;
+        DrawerOps.AddClip(target, item);
+        ShowStatus($"Clipped into {target.Name}");
+        ScheduleSave();
+    }
+
+    /// <summary>Files a clip into another drawer (drag-to-drawer). Dedup merges if the target already has it.</summary>
+    public void MoveClipToDrawer(string clipId, Drawer target)
+    {
+        var owner = AllDrawers().FirstOrDefault(d => d.Clips.Any(c => c.Id == clipId));
+        var clip = owner?.Clips.FirstOrDefault(c => c.Id == clipId);
+        if (owner == null || clip == null || owner == target) return;
+
+        owner.Clips.Remove(clip);
+        DrawerOps.AddClip(target, clip);
+        ShowStatus($"Moved to {target.Name}");
+        ScheduleSave();
+    }
+
     // ----- drawer actions -----
 
     private void NewDrawer()
@@ -250,7 +347,11 @@ public class MainViewModel : INotifyPropertyChanged
         drawer.Clips.CollectionChanged += OnAnyClipsChanged;
     }
 
-    private void OnAnyClipsChanged(object? sender, NotifyCollectionChangedEventArgs e) => ScheduleSave();
+    private void OnAnyClipsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ScheduleSave();
+        if (IsSearching) Raise(nameof(SearchResults));
+    }
 
     // ----- persistence -----
 
@@ -284,4 +385,17 @@ public class MainViewModel : INotifyPropertyChanged
     private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
     public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+/// <summary>A search match paired with the name of the drawer it lives in.</summary>
+public class SearchHit
+{
+    public SearchHit(ClipItem clip, string drawerName)
+    {
+        Clip = clip;
+        DrawerName = drawerName;
+    }
+
+    public ClipItem Clip { get; }
+    public string DrawerName { get; }
 }

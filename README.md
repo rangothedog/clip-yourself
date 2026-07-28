@@ -26,6 +26,9 @@ dotnet run --project src/ClipYourself.Desktop
 - Captures clipboard changes automatically: text, images (screenshots or copied image files), copied audio files (with waveform + play/pause + click-to-seek), and generic file lists.
 - Duplicate copies aren't shown twice — the existing clip just jumps back to the top.
 - ➕ Drawer starts a new drawer and opens its "movie reel" view; while a drawer is open, new copies land in it. Rename by clicking any drawer/session name. Per-drawer max clips / max MB are enforced by evicting the oldest clips.
+- 📌 Pin a clip to keep it at the top of its drawer, exempt from auto-eviction.
+- 🔍 Search matches text, previews, and file names across every drawer at once; results show which drawer each clip lives in.
+- Drag & drop: drop files or text from anywhere onto the sidebar to clip them without copying; drag a clip card onto a drawer row (or the session header) to file it there.
 - Settings → "Save clips between sessions" opts into persistence (JSON + content-addressed blobs under `%LOCALAPPDATA%\ClipYourself`). Turning it off deletes what was saved.
 
 ## Chrome extension

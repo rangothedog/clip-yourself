@@ -39,6 +39,27 @@ public static class ClipCapture
         return null;
     }
 
+    /// <summary>Builds a clip from a file dropped onto the sidebar (bypasses the clipboard).</summary>
+    public static ClipItem? FromFile(StorageService storage, string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+            var ext = Path.GetExtension(path);
+            if (AudioExtensions.Contains(ext)) return CaptureAudioFile(storage, path);
+            if (ImageExtensions.Contains(ext)) return CaptureImageFile(storage, path);
+            return CaptureFileList(new List<string> { path });
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Builds a clip from text dropped onto the sidebar.</summary>
+    public static ClipItem? FromText(string text)
+        => string.IsNullOrWhiteSpace(text) ? null : CaptureText(text);
+
     private static ClipItem? CaptureCore(StorageService storage)
     {
         if (Clipboard.ContainsFileDropList())
@@ -153,6 +174,10 @@ public static class ClipCapture
     {
         var info = new FileInfo(path);
         var hash = ClipHasher.HashFile(path);
+        // Copying one of our own blobs back out shouldn't surface the hash filename.
+        var displayName = path.StartsWith(storage.BlobsDir, StringComparison.OrdinalIgnoreCase)
+            ? "Clipboard audio"
+            : Path.GetFileName(path);
         // Copy into the blob store so the clip still plays if the original moves;
         // oversized files are referenced in place instead.
         var blobPath = info.Length <= MaxImportBytes ? storage.ImportBlob(path, hash) : path;
@@ -160,8 +185,8 @@ public static class ClipCapture
         return new ClipItem
         {
             Kind = ClipKind.Audio,
-            Text = Path.GetFileName(path),
-            PreviewText = Path.GetFileName(path),
+            Text = displayName,
+            PreviewText = displayName,
             AudioPath = blobPath,
             FilePaths = { path },
             Hash = hash,

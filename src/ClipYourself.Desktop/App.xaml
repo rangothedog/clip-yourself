@@ -26,6 +26,7 @@
         <conv:RelativeTimeConverter x:Key="RelTime"/>
         <conv:BytesToSizeConverter x:Key="BytesToSize"/>
         <conv:NullToVisibilityConverter x:Key="NullToVis"/>
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
         <conv:ZeroToVisibleConverter x:Key="ZeroToVisible"/>
 
         <!-- Film sprocket holes for the reel view -->
