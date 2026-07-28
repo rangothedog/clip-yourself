@@ -60,24 +60,7 @@
                         <StackPanel Visibility="{Binding Kind, Converter={StaticResource KindToVis}, ConverterParameter='Video'}">
                             <TextBlock Text="{Binding PreviewText}" FontSize="11"
                                        Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
-                            <!-- Only Video clips build a MediaElement (via the template swap below) -->
-                            <ContentControl>
-                                <ContentControl.Style>
-                                    <Style TargetType="ContentControl">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Kind}" Value="Video">
-                                                <Setter Property="ContentTemplate">
-                                                    <Setter.Value>
-                                                        <DataTemplate>
-                                                            <controls:VideoPlayer Source="{Binding VideoPath}" Margin="0,4,0,0"/>
-                                                        </DataTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ContentControl.Style>
-                            </ContentControl>
+                            <controls:VideoPlayer Source="{Binding VideoPath}" Margin="0,4,0,0"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">

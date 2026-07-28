@@ -1,14 +1,15 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace ClipYourself.Desktop.Controls;
 
 /// <summary>
-/// Small inline video preview: renders the first frame with a play badge,
+/// Small inline video preview: renders a poster frame with a play badge,
 /// click to play/pause. Falls back to an icon if the codec can't decode.
+/// If the opening frame is (near) black, seeks a few seconds in for a
+/// more representative poster.
 /// </summary>
 public partial class VideoPlayer : UserControl
 {
@@ -45,6 +46,7 @@ public partial class VideoPlayer : UserControl
     private void Load(string? path)
     {
         Fallback.Visibility = Visibility.Collapsed;
+        Surface.Visibility = Visibility.Visible;
         PlayBadge.Visibility = Visibility.Visible;
         TimeText.Text = "";
         _opened = false;
@@ -57,7 +59,7 @@ public partial class VideoPlayer : UserControl
         }
 
         Media.Source = new Uri(path);
-        // Play briefly so the first frame renders, then pause on MediaOpened.
+        // Play briefly so a frame decodes, then freeze it as the poster.
         _primingFrame = true;
         Media.Play();
     }
@@ -65,13 +67,15 @@ public partial class VideoPlayer : UserControl
     private void Media_MediaOpened(object sender, RoutedEventArgs e)
     {
         _opened = true;
-        UpdateTime();
         if (_primingFrame)
         {
             _primingFrame = false;
+            // Pausing at the just-decoded frame 0 is the one poster that renders
+            // reliably — MediaElement won't repaint a paused seek to a later frame.
             Media.Pause();
             Media.Position = TimeSpan.Zero;
         }
+        UpdateTime();
     }
 
     private void Media_MediaEnded(object sender, RoutedEventArgs e)
@@ -83,13 +87,19 @@ public partial class VideoPlayer : UserControl
 
     private void Media_MediaFailed(object sender, ExceptionRoutedEventArgs e) => ShowFallback();
 
-    private void Root_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void Surface_Click(object sender, RoutedEventArgs e)
     {
         if (!_opened) return;
-        if (_playing) { Media.Pause(); SetPlaying(false); }
-        else { Media.Play(); SetPlaying(true); }
-        // Don't let the click bubble up to the card's copy-to-clipboard button.
-        e.Handled = true;
+        if (_playing)
+        {
+            Media.Pause();
+            SetPlaying(false);
+        }
+        else
+        {
+            Media.Play();
+            SetPlaying(true);
+        }
     }
 
     private void SetPlaying(bool playing)
@@ -113,7 +123,7 @@ public partial class VideoPlayer : UserControl
     private void ShowFallback()
     {
         Media.Visibility = Visibility.Collapsed;
-        PlayBadge.Visibility = Visibility.Collapsed;
+        Surface.Visibility = Visibility.Collapsed;
         TimeText.Text = "";
         Fallback.Visibility = Visibility.Visible;
     }

@@ -96,6 +96,7 @@ public static class ClipCapture
                 var ext = Path.GetExtension(paths[0]);
                 if (AudioExtensions.Contains(ext)) return CaptureAudioFile(storage, paths[0]);
                 if (ImageExtensions.Contains(ext)) return CaptureImageFile(storage, paths[0]);
+                if (VideoExtensions.Contains(ext)) return CaptureVideoFile(paths[0]);
             }
             return CaptureFileList(paths);
         }
