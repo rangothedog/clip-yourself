@@ -6,4 +6,8 @@
     <!-- Points at the self-contained publish output; run scripts/build-installer.ps1 to produce it -->
     <DefineConstants>PublishDir=..\src\ClipYourself.Desktop\bin\Release\net10.0-windows\win-x64\publish</DefineConstants>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- WixUI dialog set: license agreement + feature (desktop shortcut) selection -->
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
 </Project>

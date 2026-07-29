@@ -1,6 +1,7 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="Clip Yourself"
-           Manufacturer="clipyourself.com"
+           Manufacturer="Rango Studio LLC"
            Version="1.0.0"
            UpgradeCode="7c1e4b0a-3f5d-4a19-9c64-2b8d0af3e7c1"
            Compressed="yes">
@@ -10,26 +11,50 @@
 
     <Icon Id="AppIcon" SourceFile="..\src\ClipYourself.Desktop\Assets\Clipyourself.ico"/>
     <Property Id="ARPPRODUCTICON" Value="AppIcon"/>
+    <Property Id="ARPURLINFOABOUT" Value="https://clipyourself.com"/>
+
+    <!-- Installer wizard: welcome, license agreement, feature selection, install -->
+    <ui:WixUI Id="WixUI_FeatureTree" InstallDirectory="INSTALLFOLDER"/>
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Clip Yourself"/>
     </StandardDirectory>
 
     <StandardDirectory Id="ProgramMenuFolder"/>
+    <StandardDirectory Id="DesktopFolder"/>
 
-    <Feature Id="Main" Title="Clip Yourself">
+    <!-- Required: the app itself (cannot be deselected) -->
+    <Feature Id="Main" Title="Clip Yourself" Description="The Clip Yourself application." AllowAbsent="no">
       <Files Include="$(var.PublishDir)\**"/>
       <ComponentRef Id="StartMenuShortcut"/>
+    </Feature>
+
+    <!-- Optional: desktop shortcut, checked by default, user can turn it off -->
+    <Feature Id="DesktopShortcut" Title="Desktop shortcut"
+             Description="Add a Clip Yourself shortcut to your desktop." Level="1">
+      <ComponentRef Id="DesktopShortcutComponent"/>
     </Feature>
 
     <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder">
       <Shortcut Id="AppStartMenuShortcut"
                 Name="Clip Yourself"
-                Description="Sidebar clipboard manager for text, images, and sound"
+                Description="Sidebar clipboard manager for text, images, sound, and video"
                 Target="[INSTALLFOLDER]ClipYourself.Desktop.exe"
                 WorkingDirectory="INSTALLFOLDER"
                 Icon="AppIcon"/>
       <RegistryValue Root="HKCU" Key="Software\ClipYourself" Name="StartMenuShortcut"
+                     Type="integer" Value="1" KeyPath="yes"/>
+    </Component>
+
+    <Component Id="DesktopShortcutComponent" Directory="DesktopFolder">
+      <Shortcut Id="AppDesktopShortcut"
+                Name="Clip Yourself"
+                Description="Sidebar clipboard manager for text, images, sound, and video"
+                Target="[INSTALLFOLDER]ClipYourself.Desktop.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon"/>
+      <RegistryValue Root="HKCU" Key="Software\ClipYourself" Name="DesktopShortcut"
                      Type="integer" Value="1" KeyPath="yes"/>
     </Component>
   </Package>
