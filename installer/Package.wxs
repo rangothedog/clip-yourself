@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Clip Yourself"
            Manufacturer="clipyourself.com"
-           Version="0.1.0"
+           Version="1.0.0"
            UpgradeCode="7c1e4b0a-3f5d-4a19-9c64-2b8d0af3e7c1"
            Compressed="yes">
 

@@ -8,7 +8,7 @@ A Windows clipboard manager that lives in a sidebar (WPF). Every copy — from a
 |---|---|
 | `ClipYourself.slnx` | Visual Studio solution (open in VS 2022 17.13+) |
 | `src/ClipYourself.Core` | .NET 8 class library — models, dedup, drawer limits, JSON + blob persistence |
-| `src/ClipYourself.Desktop` | WPF sidebar app (net8.0-windows, NAudio for waveforms) |
+| `src/ClipYourself.Desktop` | WPF sidebar app (net10.0-windows, NAudio for waveforms) |
 | `website/` | clipyourself.com landing site — React + TypeScript + Vite, static output |
 | `installer/` | WiX v5 MSI installer (self-contained x64, no .NET needed on target) |
 | `docs/` | Research notes (DAW clipboard interop) |
@@ -40,7 +40,7 @@ dotnet run --project src/ClipYourself.Desktop
 .\scripts\build-installer.ps1
 ```
 
-Publishes the desktop app self-contained (win-x64) and builds `installer/bin/Release/ClipYourself-0.1.0-win-x64.msi` via WiX v5 (restored from NuGet — nothing to install). The MSI installs to Program Files with a Start Menu shortcut, supports major upgrades, and is copied into `website/public/downloads/` for the site's download link. The installer project is in the solution but excluded from normal builds; in Visual Studio it loads with the [HeatWave](https://www.firegiant.com/products/heatwave/) extension.
+Publishes the desktop app self-contained (win-x64) and builds `installer/bin/Release/ClipYourself-1.0.0-win-x64.msi` via WiX v5 (restored from NuGet — nothing to install). The MSI installs to Program Files with a Start Menu shortcut, supports major upgrades, and is copied into `website/public/downloads/` for the site's download link. The installer project is in the solution but excluded from normal builds; in Visual Studio it loads with the [HeatWave](https://www.firegiant.com/products/heatwave/) extension.
 
 ## Website (clipyourself.com)
 

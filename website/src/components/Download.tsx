@@ -24,7 +24,7 @@ export default function Download() {
               </p>
               <a
                 className="btn btn--primary"
-                href="/downloads/ClipYourself-0.1.0-win-x64.msi"
+                href="/downloads/ClipYourself-1.0.0-win-x64.msi"
               >
                 ⬇ Download .msi
               </a>
