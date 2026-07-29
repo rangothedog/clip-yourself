@@ -273,6 +273,23 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Applies a new sidebar width to the window (and re-docks). Set by the view.</summary>
+    public Action<double>? SetSidebarWidth { get; set; }
+
+    public double SidebarWidth
+    {
+        get => Settings.SidebarWidth;
+        set
+        {
+            var clamped = Math.Clamp(value, 300, 640);
+            if (Math.Abs(Settings.SidebarWidth - clamped) < 0.5) return;
+            Settings.SidebarWidth = clamped;
+            Raise(nameof(SidebarWidth));
+            SetSidebarWidth?.Invoke(clamped);
+            ScheduleSave();
+        }
+    }
+
     public int DefaultMaxClips
     {
         get => Settings.DefaultMaxClips;

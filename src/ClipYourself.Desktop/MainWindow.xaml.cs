@@ -48,9 +48,19 @@ public partial class MainWindow : Window
         if (ViewModel is { } vm)
         {
             vm.SetDockMode = SetDockMode;
+            vm.SetSidebarWidth = ApplyWidth;
+            Width = vm.SidebarWidth;
             if (vm.ReserveDesktopSpace) { _appBar.Dock(); return; }
         }
         DockRight();
+    }
+
+    private void ApplyWidth(double width)
+    {
+        Width = width;
+        // Height/edges are pinned; just re-seat at the new width.
+        if (_appBar?.IsDocked == true) _appBar.Refresh();
+        else DockRight();
     }
 
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
