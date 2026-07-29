@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using ClipYourself.Core.Models;
 using ClipYourself.Desktop.ViewModels;
@@ -41,6 +43,7 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        SquareOffCorners();
         _appBar = new Interop.AppBarService(this);
         if (ViewModel is { } vm)
         {
@@ -48,6 +51,24 @@ public partial class MainWindow : Window
             if (vm.ReserveDesktopSpace) { _appBar.Dock(); return; }
         }
         DockRight();
+    }
+
+    private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWCP_DONOTROUND = 1;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+    /// <summary>
+    /// Windows 11 rounds top-level window corners, which leaves wedges of desktop
+    /// showing where a docked sidebar meets the screen corners. Square them off so
+    /// the edges seam flush against the screen and taskbar.
+    /// </summary>
+    private void SquareOffCorners()
+    {
+        var hwnd = new WindowInteropHelper(this).EnsureHandle();
+        int pref = DWMWCP_DONOTROUND;
+        DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
     }
 
     private void SetDockMode(bool reserve)
