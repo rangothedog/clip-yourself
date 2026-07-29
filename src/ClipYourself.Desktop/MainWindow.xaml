@@ -230,28 +230,36 @@
         <!-- ===== Session bar (drop target: file back into session) ===== -->
         <Border Grid.Row="1" Padding="12,10,12,6"
                 AllowDrop="True" DragOver="SessionBar_DragOver" Drop="SessionBar_Drop">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBox Style="{StaticResource GhostTextBox}" FontSize="13" FontWeight="SemiBold"
-                             ToolTip="Click to rename this session"
-                             Text="{Binding SessionDrawer.Name, UpdateSourceTrigger=PropertyChanged}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
-                            <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
-                        </TextBlock>
-                        <TextBlock Text=" · ⏸ capture paused" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{StaticResource DangerBrush}"
-                                   Visibility="{Binding IsCapturePaused, Converter={StaticResource BoolToVis}}"/>
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBox Style="{StaticResource GhostTextBox}" FontSize="13" FontWeight="SemiBold"
+                                 ToolTip="Click to rename this session"
+                                 Text="{Binding SessionDrawer.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
+                                <Run Text="{Binding SessionDrawer.Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding SessionDrawer.TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
+                            </TextBlock>
+                            <TextBlock Text=" · ⏸ capture paused" FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{StaticResource DangerBrush}"
+                                       Visibility="{Binding IsCapturePaused, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-                <Button Grid.Column="1" Content="➕ Drawer" Style="{StaticResource AccentButton}"
-                        ToolTip="Start a new drawer" VerticalAlignment="Center"
-                        Command="{Binding NewDrawerCommand}"/>
-            </Grid>
+                    <Button Grid.Column="1" Content="➕ Drawer" Style="{StaticResource AccentButton}"
+                            ToolTip="Start a new drawer" VerticalAlignment="Center"
+                            Command="{Binding NewDrawerCommand}"/>
+                </Grid>
+                <!-- Usage thermometer: how full the current drawer is (clips/size vs. limits) -->
+                <ProgressBar Style="{StaticResource UsageBar}" Margin="0,8,0,0"
+                             DataContext="{Binding SessionDrawer}"
+                             Value="{Binding UsageFraction, Mode=OneWay}"
+                             Foreground="{Binding UsageFraction, Converter={StaticResource UsageToBrush}}"
+                             ToolTip="How full this drawer is — fills green→red as it nears its clip/size limit"/>
+            </StackPanel>
         </Border>
 
         <!-- ===== Search ===== -->
@@ -358,6 +366,10 @@
                             <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
                                 <Run Text="{Binding Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding TotalSizeBytes, Mode=OneWay, Converter={StaticResource BytesToSize}}"/>
                             </TextBlock>
+                            <ProgressBar Style="{StaticResource UsageBar}" Margin="0,5,0,0"
+                                         Value="{Binding UsageFraction, Mode=OneWay}"
+                                         Foreground="{Binding UsageFraction, Converter={StaticResource UsageToBrush}}"
+                                         ToolTip="How full this drawer is — fills green→red as it nears its clip/size limit"/>
                         </StackPanel>
                         <Button Grid.Column="2" Content="🧹" Style="{StaticResource DangerIconButton}"
                                 ToolTip="Clear all clips in this drawer"
@@ -387,7 +399,7 @@
                         <TextBlock Text="Max MB" FontSize="10" Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
                         <TextBox Style="{StaticResource FieldTextBox}" Width="48" FontSize="11" Margin="6,0,14,0"
                                  Text="{Binding MaxSizeMB, UpdateSourceTrigger=LostFocus}"/>
-                        <TextBlock Text="new copies land in this drawer while open" FontSize="10"
+                        <TextBlock Text="new copies land in this drawer" FontSize="10"
                                    Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>

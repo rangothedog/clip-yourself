@@ -33,13 +33,28 @@ public class Drawer : INotifyPropertyChanged
     public int MaxClips
     {
         get => _maxClips;
-        set { if (value < 1) value = 1; if (_maxClips == value) return; _maxClips = value; Raise(nameof(MaxClips)); }
+        set { if (value < 1) value = 1; if (_maxClips == value) return; _maxClips = value; Raise(nameof(MaxClips)); Raise(nameof(UsageFraction)); }
     }
 
     public int MaxSizeMB
     {
         get => _maxSizeMB;
-        set { if (value < 1) value = 1; if (_maxSizeMB == value) return; _maxSizeMB = value; Raise(nameof(MaxSizeMB)); }
+        set { if (value < 1) value = 1; if (_maxSizeMB == value) return; _maxSizeMB = value; Raise(nameof(MaxSizeMB)); Raise(nameof(UsageFraction)); }
+    }
+
+    /// <summary>
+    /// How full the drawer is (0–1), the higher of the clip-count and size ratios —
+    /// whichever limit will trigger eviction first. Drives the usage thermometer.
+    /// </summary>
+    [JsonIgnore]
+    public double UsageFraction
+    {
+        get
+        {
+            var clipRatio = (double)_clips.Count / Math.Max(1, _maxClips);
+            var sizeRatio = (double)TotalSizeBytes / Math.Max(1, MaxSizeBytes);
+            return Math.Clamp(Math.Max(clipRatio, sizeRatio), 0, 1);
+        }
     }
 
     [JsonIgnore]
@@ -66,7 +81,10 @@ public class Drawer : INotifyPropertyChanged
         => clips.CollectionChanged += OnClipsChanged;
 
     private void OnClipsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => Raise(nameof(TotalSizeBytes));
+    {
+        Raise(nameof(TotalSizeBytes));
+        Raise(nameof(UsageFraction));
+    }
 
     private void Raise(string name)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

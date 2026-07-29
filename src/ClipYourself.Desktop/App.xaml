@@ -34,6 +34,29 @@
         <conv:KindToBadgeBackgroundConverter x:Key="KindBadgeBg"/>
         <conv:KindToBadgeForegroundConverter x:Key="KindBadgeFg"/>
         <conv:ZeroToVisibleConverter x:Key="ZeroToVisible"/>
+        <conv:UsageToBrushConverter x:Key="UsageToBrush"/>
+
+        <!-- Thin green→red "thermometer" showing how full a drawer is -->
+        <Style x:Key="UsageBar" TargetType="ProgressBar">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="1"/>
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="#FF2A313B"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="2" ClipToBounds="True">
+                            <Grid>
+                                <Border x:Name="PART_Track"/>
+                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                        Background="{TemplateBinding Foreground}" CornerRadius="2"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- Film sprocket holes for the reel view -->
         <DrawingBrush x:Key="SprocketBrush" TileMode="Tile" Stretch="None"
