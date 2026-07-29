@@ -15,12 +15,14 @@ public partial class MainWindow : Window
     private Point _dragStart;
     private ClipItem? _dragClip;
     private DispatcherTimer? _dropOverlayHideTimer;
+    private Interop.AppBarService? _appBar;
 
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += (_, _) => DockRight();
+        Loaded += OnLoaded;
         Closing += OnClosing;
+        SizeChanged += (_, _) => _appBar?.Refresh();
 
         // A borderless window that gets maximized (Win+Up / snap) covers the whole
         // screen with no way back — undo it immediately and re-dock instead.
@@ -29,12 +31,34 @@ public partial class MainWindow : Window
             if (WindowState == WindowState.Maximized)
             {
                 WindowState = WindowState.Normal;
-                DockRight();
+                if (_appBar?.IsDocked == true) _appBar.Refresh();
+                else DockRight();
             }
         };
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        _appBar = new Interop.AppBarService(this);
+        if (ViewModel is { } vm)
+        {
+            vm.SetDockMode = SetDockMode;
+            if (vm.ReserveDesktopSpace) { _appBar.Dock(); return; }
+        }
+        DockRight();
+    }
+
+    private void SetDockMode(bool reserve)
+    {
+        if (_appBar == null) return;
+        if (reserve) _appBar.Dock();
+        else { _appBar.Undock(); DockRight(); }
+    }
+
+    /// <summary>Release the reserved desktop space. Call before the app exits.</summary>
+    public void ReleaseAppBar() => _appBar?.Undock();
 
     /// <summary>Snap the sidebar to the right edge of the work area.</summary>
     private void DockRight()
@@ -57,6 +81,8 @@ public partial class MainWindow : Window
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // A docked AppBar is pinned to the edge — dragging it would fight the shell.
+        if (_appBar?.IsDocked == true) return;
         if (e.ButtonState == MouseButtonState.Pressed) DragMove();
     }
 

@@ -22,7 +22,7 @@ Run from Visual Studio (set **ClipYourself.Desktop** as startup project) or:
 dotnet run --project src/ClipYourself.Desktop
 ```
 
-- Docks to the right edge as a dark sidebar; drag the header to move it, 📌 toggles always-on-top.
+- Docks to the right edge as a dark sidebar. By default it's a true Windows **AppBar** that reserves desktop space — other apps (even maximized ones) tile beside it, not underneath. Settings → "Reserve desktop space (dock)" turns this off to float on top instead; when floating, drag the header to move it and 📌 toggles always-on-top.
 - **Ctrl+Alt+V** shows/hides the sidebar from anywhere — configurable in Settings (click the hotkey box, press a new combo). Closing/hiding keeps it running; quit from Settings.
 - **DAW Bridge**: in Settings, watch the folders your DAW exports to; new audio files are clipped automatically once the DAW finishes writing them (works with Audacity, REAPER, Pro Tools "Export Clips as Files", and anything else that saves to disk).
 - Captures clipboard changes automatically: text, images (screenshots or copied image files), copied audio files (with waveform + play/pause + click-to-seek), video files (inline first-frame preview + play), and generic file lists.

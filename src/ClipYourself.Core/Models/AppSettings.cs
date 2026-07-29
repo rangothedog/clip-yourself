@@ -14,6 +14,12 @@ public class AppSettings
     /// <summary>Keep the sidebar above other windows.</summary>
     public bool AlwaysOnTop { get; set; } = true;
 
+    /// <summary>
+    /// Dock as a Windows AppBar that reserves desktop space (other apps tile
+    /// beside it) instead of floating on top.
+    /// </summary>
+    public bool ReserveDesktopSpace { get; set; } = true;
+
     /// <summary>Global show/hide hotkey, e.g. "Ctrl+Alt+V".</summary>
     public string Hotkey { get; set; } = "Ctrl+Alt+V";
 

@@ -416,6 +416,11 @@
                     <TextBlock Text="When on, every drawer (including the current session) is saved automatically. Turning it off removes saved clips from disk."
                                FontSize="10" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="20,4,0,16"/>
 
+                    <CheckBox IsChecked="{Binding ReserveDesktopSpace}" Foreground="{StaticResource TextBrush}" FontSize="12"
+                              Content="Reserve desktop space (dock)"/>
+                    <TextBlock Text="Docks the sidebar to the screen edge as a true AppBar — other apps, even maximized ones, tile beside it instead of underneath. Turn off to float on top."
+                               FontSize="10" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="20,4,0,16"/>
+
                     <TextBlock Text="DEFAULTS FOR NEW DRAWERS" FontSize="10" FontWeight="SemiBold"
                                Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,6"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">

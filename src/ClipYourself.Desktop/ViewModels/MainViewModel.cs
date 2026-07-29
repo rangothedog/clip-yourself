@@ -51,6 +51,9 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>Set by App: re-registers the global hotkey, returns success.</summary>
     public Func<string, bool>? RebindHotkey { get; set; }
 
+    /// <summary>Set by MainWindow: switches between AppBar dock and floating.</summary>
+    public Action<bool>? SetDockMode { get; set; }
+
     public MainViewModel(StorageService storage)
     {
         _storage = storage;
@@ -252,6 +255,20 @@ public class MainViewModel : INotifyPropertyChanged
             if (Settings.AlwaysOnTop == value) return;
             Settings.AlwaysOnTop = value;
             Raise(nameof(AlwaysOnTop));
+            ScheduleSave();
+        }
+    }
+
+    public bool ReserveDesktopSpace
+    {
+        get => Settings.ReserveDesktopSpace;
+        set
+        {
+            if (Settings.ReserveDesktopSpace == value) return;
+            Settings.ReserveDesktopSpace = value;
+            Raise(nameof(ReserveDesktopSpace));
+            SetDockMode?.Invoke(value);
+            ShowStatus(value ? "Docked — reserving desktop space" : "Floating over other windows");
             ScheduleSave();
         }
     }

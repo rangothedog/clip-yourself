@@ -124,6 +124,7 @@ public partial class App : Application
         _cleanedUp = true;
         IsExiting = true;
 
+        (MainWindow as MainWindow)?.ReleaseAppBar();
         _viewModel?.SaveAll();
         _viewModel?.Shutdown();
         _monitor?.Dispose();
