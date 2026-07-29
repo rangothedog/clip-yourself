@@ -84,8 +84,13 @@ public partial class MainWindow : Window
     private void SetDockMode(bool reserve)
     {
         if (_appBar == null) return;
-        if (reserve) _appBar.Dock();
-        else { _appBar.Undock(); DockRight(); }
+        if (reserve) { _appBar.Dock(); return; }
+
+        // Releasing the AppBar reservation doesn't update SystemParameters.WorkArea
+        // synchronously — reposition after the shell has reclaimed the space, or we'd
+        // read the still-shrunk work area and land the window mid-screen.
+        _appBar.Undock();
+        Dispatcher.BeginInvoke(new Action(DockRight), DispatcherPriority.Background);
     }
 
     /// <summary>Release the reserved desktop space. Call before the app exits.</summary>

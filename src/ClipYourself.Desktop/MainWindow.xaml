@@ -166,6 +166,16 @@
         <!-- ===== Header (drag handle) ===== -->
         <Border Grid.Row="0" Background="{StaticResource BgBrush}" Padding="12,8"
                 MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <!-- Only floating: signal the header is a grab handle -->
+                        <DataTrigger Binding="{Binding IsFloating}" Value="True">
+                            <Setter Property="Cursor" Value="SizeAll"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -175,6 +185,19 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="⠿" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"
+                               Foreground="{StaticResource SubTextBrush}" ToolTip="Drag to move the sidebar">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFloating}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <Image Source="/Assets/Clipyourself.ico" Width="24" Height="24" Margin="0,0,8,0"
                            RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
                     <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold"

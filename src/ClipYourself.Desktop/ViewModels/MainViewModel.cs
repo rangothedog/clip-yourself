@@ -267,11 +267,15 @@ public class MainViewModel : INotifyPropertyChanged
             if (Settings.ReserveDesktopSpace == value) return;
             Settings.ReserveDesktopSpace = value;
             Raise(nameof(ReserveDesktopSpace));
+            Raise(nameof(IsFloating));
             SetDockMode?.Invoke(value);
-            ShowStatus(value ? "Docked — reserving desktop space" : "Floating over other windows");
+            ShowStatus(value ? "Docked — reserving desktop space" : "Floating — drag the header to move it");
             ScheduleSave();
         }
     }
+
+    /// <summary>True when the sidebar floats instead of docking — the header is draggable then.</summary>
+    public bool IsFloating => !Settings.ReserveDesktopSpace;
 
     /// <summary>Applies a new sidebar width to the window (and re-docks). Set by the view.</summary>
     public Action<double>? SetSidebarWidth { get; set; }
