@@ -249,9 +249,14 @@
                                        Visibility="{Binding IsCapturePaused, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
                     </StackPanel>
-                    <Button Grid.Column="1" Content="➕ Drawer" Style="{StaticResource AccentButton}"
-                            ToolTip="Start a new drawer" VerticalAlignment="Center"
-                            Command="{Binding NewDrawerCommand}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="📋" Style="{StaticResource IconButton}"
+                                ToolTip="Paste the clipboard into this session (Ctrl+V)"
+                                Command="{Binding PasteCommand}"/>
+                        <Button Content="➕ Drawer" Style="{StaticResource AccentButton}"
+                                ToolTip="Start a new drawer" Margin="4,0,0,0"
+                                Command="{Binding NewDrawerCommand}"/>
+                    </StackPanel>
                 </Grid>
                 <!-- Usage thermometer: how full the current drawer is (clips/size vs. limits) -->
                 <ProgressBar Style="{StaticResource UsageBar}" Margin="0,8,0,0"
@@ -356,6 +361,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Button Content="←" Style="{StaticResource IconButton}" ToolTip="Back to sidebar"
                                 Command="{Binding DataContext.CloseReelCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
@@ -371,11 +377,14 @@
                                          Foreground="{Binding UsageFraction, Converter={StaticResource UsageToBrush}}"
                                          ToolTip="How full this drawer is — fills green→red as it nears its clip/size limit"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Content="🧹" Style="{StaticResource DangerIconButton}"
+                        <Button Grid.Column="2" Content="📋" Style="{StaticResource IconButton}"
+                                ToolTip="Paste the clipboard into this drawer (Ctrl+V)"
+                                Command="{Binding DataContext.PasteCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        <Button Grid.Column="3" Content="🧹" Style="{StaticResource DangerIconButton}"
                                 ToolTip="Clear all clips in this drawer"
                                 Command="{Binding DataContext.ClearDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"/>
-                        <Button Grid.Column="3" Content="🗑" ToolTip="Delete this drawer"
+                        <Button Grid.Column="4" Content="🗑" ToolTip="Delete this drawer"
                                 Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}">
                             <Button.Style>

@@ -93,6 +93,7 @@ public class MainViewModel : INotifyPropertyChanged
         ClearDrawerCommand = new RelayCommand(p => { if (p is Drawer d) ClearDrawer(d); });
         DeleteClipCommand = new RelayCommand(p => { if (p is ClipItem c) DeleteClip(c); });
         CopyClipCommand = new RelayCommand(p => { if (p is ClipItem c) CopyClip(c); });
+        PasteCommand = new RelayCommand(_ => PasteIntoCurrentDrawer());
         ToggleSettingsCommand = new RelayCommand(_ => IsSettingsOpen = !IsSettingsOpen);
         ExitCommand = new RelayCommand(_ => App.ExitApp());
         TogglePinCommand = new RelayCommand(p => { if (p is ClipItem c) TogglePin(c); });
@@ -115,6 +116,7 @@ public class MainViewModel : INotifyPropertyChanged
     public RelayCommand ClearDrawerCommand { get; }
     public RelayCommand DeleteClipCommand { get; }
     public RelayCommand CopyClipCommand { get; }
+    public RelayCommand PasteCommand { get; }
     public RelayCommand ToggleSettingsCommand { get; }
     public RelayCommand ExitCommand { get; }
     public RelayCommand TogglePinCommand { get; }
@@ -331,6 +333,23 @@ public class MainViewModel : INotifyPropertyChanged
         var target = OpenDrawer ?? SessionDrawer;
         var result = DrawerOps.AddClip(target, item);
         ReportLimits(target, result);
+        ScheduleSave();
+    }
+
+    /// <summary>
+    /// Explicitly add whatever is on the clipboard to the current drawer (the paste
+    /// gesture — Ctrl+V or the 📋 button). Unlike auto-capture it ignores the pause
+    /// and post-copy suppress window, so clicking a clip in one drawer to copy it and
+    /// then pasting into another files it across.
+    /// </summary>
+    public void PasteIntoCurrentDrawer()
+    {
+        var item = ClipCapture.TryCapture(_storage);
+        if (item == null) { ShowStatus("Nothing to paste — clipboard is empty"); return; }
+
+        var target = OpenDrawer ?? SessionDrawer;
+        var result = DrawerOps.AddClip(target, item);
+        ReportLimits(target, result, $"Pasted into {target.Name}");
         ScheduleSave();
     }
 

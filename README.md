@@ -28,6 +28,7 @@ dotnet run --project src/ClipYourself.Desktop
 - Captures clipboard changes automatically: text, images (screenshots or copied image files), copied audio files (with waveform + play/pause + click-to-seek), video files (inline first-frame preview + play), and generic file lists.
 - Drag an image out of a browser onto the sidebar and it's **fetched** and stored as a real image (on the clipboard, not just a link). Drag a video in and it's clipped with an inline preview; the file reference copies/drags back out.
 - Duplicate copies aren't shown twice — the existing clip just jumps back to the top.
+- **Ctrl+V** (or the 📋 button) pastes the clipboard into the current drawer — click a clip in one drawer to copy it, open another, and paste it in.
 - ➕ Drawer starts a new drawer and opens its "movie reel" view; while a drawer is open, new copies land in it. Rename by clicking any drawer/session name. Per-drawer max clips / max MB are enforced by evicting the oldest clips.
 - 📌 Pin a clip to keep it at the top of its drawer, exempt from auto-eviction.
 - 🔍 Search matches text, previews, and file names across every drawer at once; results show which drawer each clip lives in.

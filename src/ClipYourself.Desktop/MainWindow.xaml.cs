@@ -24,6 +24,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         Loaded += OnLoaded;
         Closing += OnClosing;
+        PreviewKeyDown += Window_PreviewKeyDown;
         SizeChanged += (_, _) => _appBar?.Refresh();
 
         // A borderless window that gets maximized (Win+Up / snap) covers the whole
@@ -123,6 +124,16 @@ public partial class MainWindow : Window
     }
 
     private void HideButton_Click(object sender, RoutedEventArgs e) => Hide();
+
+    /// <summary>Ctrl+V pastes the clipboard into the current drawer — unless a text field is focused.</summary>
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.V || (Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control) return;
+        // Let rename boxes, the search field, and the hotkey capture handle their own paste.
+        if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase) return;
+        ViewModel?.PasteIntoCurrentDrawer();
+        e.Handled = true;
+    }
 
     private void HotkeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
