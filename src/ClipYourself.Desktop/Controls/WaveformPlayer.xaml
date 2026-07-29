@@ -41,6 +41,10 @@
                       MouseLeftButtonDown="WaveGrid_MouseLeftButtonDown">
                     <Rectangle x:Name="ProgressRect" HorizontalAlignment="Left" Width="0" Fill="#334F8CFF"/>
                     <Polygon x:Name="WavePolygon" Stretch="Fill" Fill="#FF4F8CFF" Opacity="0.85" Margin="3"/>
+                    <!-- Live frequency analyzer (LED bars) shown while playing -->
+                    <Border x:Name="AnalyzerHost" Background="#FF090B0E" Visibility="Collapsed" Padding="2,1">
+                        <UniformGrid x:Name="AnalyzerGrid" Rows="1"/>
+                    </Border>
                     <TextBlock x:Name="FallbackText" Text="waveform unavailable" FontSize="10"
                                Foreground="#FF9AA3B2" HorizontalAlignment="Center" VerticalAlignment="Center"
                                Visibility="Collapsed"/>

@@ -12,9 +12,10 @@ export default function Hero() {
           </h1>
           <p className="hero__sub">
             Clip Yourself is a Windows sidebar that keeps every copy — text,
-            images, and <strong>sound</strong> — as a living clip you can
-            preview, pin, search, and drag straight back into any app. Copy in
-            your browser, your editor, anywhere: it all lands on the shelf.
+            images, <strong>sound</strong>, and even <strong>video</strong> — as
+            a living clip you can preview, pin, search, and drag straight back
+            into any app. Drop files and folders from Explorer onto the shelf,
+            and drag any clip right back out.
           </p>
           <div className="hero__ctas">
             <a
