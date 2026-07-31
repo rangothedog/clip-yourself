@@ -41,7 +41,7 @@ dotnet run --project src/ClipYourself.Desktop
 .\scripts\build-installer.ps1
 ```
 
-Publishes the desktop app self-contained (win-x64) and builds `installer/bin/Release/ClipYourself-1.0.1-win-x64.msi` via WiX v5 (restored from NuGet — nothing to install). The MSI installs to Program Files with a Start Menu shortcut, supports major upgrades, and is copied into `website/public/downloads/` for the site's download link. The installer project is in the solution but excluded from normal builds; in Visual Studio it loads with the [HeatWave](https://www.firegiant.com/products/heatwave/) extension.
+Publishes the desktop app self-contained (win-x64) and builds `installer/bin/Release/ClipYourself-1.0.2-win-x64.msi` via WiX v5 (restored from NuGet — nothing to install). The MSI installs to Program Files with a Start Menu shortcut, supports major upgrades, and is copied into `website/public/downloads/` for the site's download link. The installer project is in the solution but excluded from normal builds; in Visual Studio it loads with the [HeatWave](https://www.firegiant.com/products/heatwave/) extension.
 
 ## Website (clipyourself.com)
 
