@@ -26,6 +26,7 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         PreviewKeyDown += Window_PreviewKeyDown;
         SizeChanged += (_, _) => _appBar?.Refresh();
+        IsVisibleChanged += OnIsVisibleChanged;
 
         // A borderless window that gets maximized (Win+Up / snap) covers the whole
         // screen with no way back — undo it immediately and re-dock instead.
@@ -37,7 +38,30 @@ public partial class MainWindow : Window
                 if (_appBar?.IsDocked == true) _appBar.Refresh();
                 else DockRight();
             }
+            else if (WindowState == WindowState.Minimized)
+            {
+                // Give the reserved space back while minimized.
+                _appBar?.Undock();
+            }
+            else if (ViewModel is { ReserveDesktopSpace: true })
+            {
+                // Restored from minimized — reclaim the dock.
+                _appBar?.Dock();
+            }
         };
+    }
+
+    /// <summary>
+    /// The AppBar reservation lives until it's explicitly removed, so hiding the
+    /// sidebar (— button, Ctrl+Alt+V, close) would otherwise keep its desktop space
+    /// reserved. Release it when hidden and reclaim it when shown.
+    /// </summary>
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_appBar == null) return;
+        if (ViewModel is not { ReserveDesktopSpace: true }) return;
+        if ((bool)e.NewValue) _appBar.Dock();
+        else _appBar.Undock();
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
