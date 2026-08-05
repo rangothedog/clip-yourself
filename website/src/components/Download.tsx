@@ -1,6 +1,9 @@
 import Reveal from "./Reveal";
 
 export default function Download() {
+  const installerName = "ClipYourself-1.0.2-win-x64.msi";
+  const portableName = "ClipYourself-1.0.2-win-x64-portable.zip";
+
   return (
     <section className="section section--panel" id="download">
       <div className="container">
@@ -22,25 +25,50 @@ export default function Download() {
                 waveforms, smart dedup, and the drag &amp; drop shelf. It
                 captures everything you copy — in your browser too.
               </p>
-              <a
-                className="btn btn--primary"
-                href="/downloads/ClipYourself-1.0.2-win-x64.msi"
-              >
-                ⬇ Download .msi
-              </a>
+              <div className="download-card__actions">
+                <a className="btn btn--primary" href={`/downloads/${installerName}`}>
+                  ⬇ Download .msi
+                </a>
+                <a className="btn btn--ghost" href={`/downloads/${portableName}`}>
+                  ⬇ Download portable .zip
+                </a>
+                <a className="btn btn--ghost" href="/downloads/checksums.txt">
+                  View checksums.txt
+                </a>
+              </div>
               <p className="download-card__meta">Windows 10/11 · x64 · free</p>
               <p className="download-card__note">
-                Self-contained — no .NET install needed. Prefer building from
-                source?{" "}
+                Self-contained — no .NET install needed. You can also grab this
+                build from the{" "}
+                <a
+                  href="https://github.com/rangothedog/clip-yourself/releases/tag/v1.0.2"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  v1.0.2 release on GitHub
+                </a>
+                , or build from{" "}
                 <a
                   href="https://github.com/rangothedog/clip-yourself"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  It&rsquo;s on GitHub
+                  source
                 </a>
                 .
               </p>
+              <div className="download-verify" role="note" aria-label="Verify download in PowerShell">
+                <h4>Verify your download (PowerShell)</h4>
+                <pre>
+                  <code>{`cd "$env:USERPROFILE\\Downloads"
+Get-FileHash .\\${installerName} -Algorithm SHA256
+Get-Content .\\checksums.txt`}</code>
+                </pre>
+                <p className="download-card__note">
+                  The hash from <code>Get-FileHash</code> should exactly match the
+                  corresponding line in <code>checksums.txt</code>.
+                </p>
+              </div>
             </article>
           </Reveal>
         </div>

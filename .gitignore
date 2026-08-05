@@ -9,6 +9,8 @@ node_modules/
 extension/dist/
 website/dist/
 website/public/downloads/*.msi
+website/public/downloads/*.zip
+website/public/downloads/checksums.txt
 
 # OS
 Thumbs.db

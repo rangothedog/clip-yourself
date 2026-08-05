@@ -34,6 +34,9 @@ Notes:
   buttons link to `/downloads/ClipYourself-1.0.2-win-x64.msi`; update the
   version in `src/components/Hero.tsx` and `src/components/Download.tsx`
   when the installer version bumps.
+- The release script also emits a portable zip
+  (`ClipYourself-<version>-win-x64-portable.zip`) and `checksums.txt`
+  (SHA-256 values for MSI + ZIP). Keep these files in `public/downloads/`.
 - `public/screenshots/*.svg` are labeled placeholders — swap in real PNG
   screenshots (keep the same file names or update `ReelShowcase.tsx`).
 - Everything under `public/` is copied verbatim into `dist/`.
