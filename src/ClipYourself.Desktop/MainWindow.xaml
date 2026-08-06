@@ -114,16 +114,21 @@
             </StackPanel>
         </DataTemplate>
 
-        <!-- One drawer row in the "Drawers" section (drop target for filing clips) -->
+        <!-- One drawer row in the "Drawers" section — the whole row opens it
+             (and is a drop target for filing clips); only 🗑 is carved out. -->
         <DataTemplate x:Key="DrawerRowTemplate">
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource EdgeBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="8,6"
-                    AllowDrop="True" DragOver="DrawerRow_DragOver" Drop="DrawerRow_Drop">
+            <Button Style="{StaticResource DrawerRowButton}"
+                    ToolTip="Open drawer · drag onto another drawer to reorder"
+                    AllowDrop="True"
+                    PreviewMouseLeftButtonDown="DrawerRow_PreviewMouseLeftButtonDown"
+                    PreviewMouseMove="DrawerRow_PreviewMouseMove"
+                    DragOver="DrawerRow_DragOver" DragLeave="DrawerRow_DragLeave" Drop="DrawerRow_Drop"
+                    Command="{Binding DataContext.OpenDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
@@ -131,26 +136,19 @@
                                Foreground="{StaticResource AccentBrush}"/>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <Button Style="{StaticResource LinkButton}" FontSize="12"
-                                Content="{Binding Name}"
-                                ToolTip="Open drawer (rename it inside)"
-                                Command="{Binding DataContext.OpenDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                CommandParameter="{Binding}"/>
+                        <TextBlock Text="{Binding Name}" FontSize="12"
+                                   Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis"/>
                         <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">
                             <Run Text="{Binding Clips.Count, Mode=OneWay, Converter={StaticResource ClipCount}}"/><Run Text=" · "/><Run Text="{Binding CreatedAt, Converter={StaticResource RelTime}, Mode=OneWay}"/>
                         </TextBlock>
                     </StackPanel>
 
-                    <Button Grid.Column="2" Content="🎞" Style="{StaticResource IconButton}"
-                            ToolTip="Open drawer"
-                            Command="{Binding DataContext.OpenDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            CommandParameter="{Binding}"/>
-                    <Button Grid.Column="3" Content="🗑" Style="{StaticResource DangerIconButton}"
+                    <Button Grid.Column="2" Content="🗑" Style="{StaticResource DangerIconButton}"
                             ToolTip="Delete drawer"
                             Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"/>
                 </Grid>
-            </Border>
+            </Button>
         </DataTemplate>
     </Window.Resources>
 
@@ -253,6 +251,10 @@
                         <Button Content="📋" Style="{StaticResource IconButton}"
                                 ToolTip="Paste the clipboard into this session (Ctrl+V)"
                                 Command="{Binding PasteCommand}"/>
+                        <Button Content="🧹" Style="{StaticResource DangerIconButton}"
+                                ToolTip="Delete all open clips"
+                                Command="{Binding ClearDrawerCommand}"
+                                CommandParameter="{Binding SessionDrawer}"/>
                         <Button Content="➕ Drawer" Style="{StaticResource AccentButton}"
                                 ToolTip="Start a new drawer" Margin="4,0,0,0"
                                 Command="{Binding NewDrawerCommand}"/>
@@ -366,7 +368,7 @@
                         <Button Content="←" Style="{StaticResource IconButton}" ToolTip="Back to sidebar"
                                 Command="{Binding DataContext.CloseReelCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                         <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
-                            <TextBox Style="{StaticResource GhostTextBox}" FontSize="14" FontWeight="SemiBold"
+                            <TextBox x:Name="ReelNameBox" Style="{StaticResource GhostTextBox}" FontSize="14" FontWeight="SemiBold"
                                      ToolTip="Click to rename"
                                      Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBlock FontSize="10" Foreground="{StaticResource SubTextBrush}">

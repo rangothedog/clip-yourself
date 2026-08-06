@@ -20,7 +20,7 @@ export default function Hero() {
           <div className="hero__ctas">
             <a
               className="btn btn--primary btn--big"
-              href="/downloads/ClipYourself-1.0.2-win-x64.msi"
+              href="/downloads/ClipYourself-1.0.3-win-x64.msi"
             >
               ⬇ Download for Windows (.msi)
             </a>

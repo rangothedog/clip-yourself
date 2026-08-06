@@ -1,6 +1,6 @@
 <Project Sdk="WixToolset.Sdk/5.0.2">
   <PropertyGroup>
-    <OutputName>ClipYourself-1.0.2-win-x64</OutputName>
+    <OutputName>ClipYourself-1.0.3-win-x64</OutputName>
     <InstallerPlatform>x64</InstallerPlatform>
     <SuppressSpecificWarnings>1118</SuppressSpecificWarnings>
     <!-- Points at the self-contained publish output; run scripts/build-installer.ps1 to produce it -->

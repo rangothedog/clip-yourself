@@ -31,7 +31,7 @@ Notes:
 
 - `public/downloads/` is where CI drops the Windows installer
   (`ClipYourself-<version>-win-x64.msi`). The hero and Download-section
-  buttons link to `/downloads/ClipYourself-1.0.2-win-x64.msi`; update the
+  buttons link to `/downloads/ClipYourself-1.0.3-win-x64.msi`; update the
   version in `src/components/Hero.tsx` and `src/components/Download.tsx`
   when the installer version bumps.
 - The release script also emits a portable zip

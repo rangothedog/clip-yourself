@@ -16,6 +16,9 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>Custom drag format used to file clips into drawers inside the app.</summary>
     public const string ClipDragFormat = "ClipYourself.ClipId";
 
+    /// <summary>Custom drag format used to reorder drawers by dragging one onto another.</summary>
+    public const string DrawerDragFormat = "ClipYourself.DrawerId";
+
     /// <summary>Practical CF_WAVE ceiling — Windows rejects large in-RAM wave payloads.</summary>
     private const long MaxWaveClipboardBytes = 25L * 1024 * 1024;
 
@@ -53,6 +56,9 @@ public class MainViewModel : INotifyPropertyChanged
 
     /// <summary>Set by MainWindow: switches between AppBar dock and floating.</summary>
     public Action<bool>? SetDockMode { get; set; }
+
+    /// <summary>Set by MainWindow: focuses the reel's name box so a fresh drawer can be renamed immediately.</summary>
+    public Action? BeginRenameDrawer { get; set; }
 
     public MainViewModel(StorageService storage)
     {
@@ -721,6 +727,24 @@ public class MainViewModel : INotifyPropertyChanged
         ScheduleSave();
     }
 
+    /// <summary>
+    /// Reorders a drawer so it lands at another drawer's slot (drag one drawer row onto
+    /// another), then renumbers the list so the new order survives a restart.
+    /// </summary>
+    public void ReorderDrawer(string draggedDrawerId, Drawer targetDrawer)
+    {
+        var dragged = Drawers.FirstOrDefault(d => d.Id == draggedDrawerId);
+        if (dragged == null || dragged == targetDrawer) return;
+
+        var from = Drawers.IndexOf(dragged);
+        var to = Drawers.IndexOf(targetDrawer);
+        if (from < 0 || to < 0 || from == to) return;
+
+        Drawers.Move(from, to);
+        for (var i = 0; i < Drawers.Count; i++) Drawers[i].Order = i;
+        ScheduleSave();
+    }
+
     /// <summary>Files a clip into another drawer (drag-to-drawer). Dedup merges if the target already has it.</summary>
     public void MoveClipToDrawer(string clipId, Drawer target)
     {
@@ -748,6 +772,7 @@ public class MainViewModel : INotifyPropertyChanged
         HookDrawer(drawer);
         OpenDrawer = drawer;
         IsSettingsOpen = false;
+        BeginRenameDrawer?.Invoke();
     }
 
     private void DeleteDrawer(Drawer drawer)

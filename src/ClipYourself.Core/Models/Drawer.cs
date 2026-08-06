@@ -27,6 +27,9 @@ public class Drawer : INotifyPropertyChanged
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+    /// <summary>Explicit position in the drawers list (drag-to-reorder); ties break by CreatedAt.</summary>
+    public int Order { get; set; }
+
     /// <summary>True when this drawer was auto-created at the start of a session.</summary>
     public bool IsSession { get; set; }
 

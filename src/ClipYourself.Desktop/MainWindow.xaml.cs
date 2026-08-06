@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using ClipYourself.Core.Models;
 using ClipYourself.Desktop.ViewModels;
@@ -13,9 +14,12 @@ namespace ClipYourself.Desktop;
 public partial class MainWindow : Window
 {
     private const string ClipDragFormat = MainViewModel.ClipDragFormat;
+    private const string DrawerDragFormat = MainViewModel.DrawerDragFormat;
 
     private Point _dragStart;
     private ClipItem? _dragClip;
+    private Point _drawerDragStart;
+    private Drawer? _dragDrawer;
     private DispatcherTimer? _dropOverlayHideTimer;
     private Interop.AppBarService? _appBar;
 
@@ -74,6 +78,7 @@ public partial class MainWindow : Window
         {
             vm.SetDockMode = SetDockMode;
             vm.SetSidebarWidth = ApplyWidth;
+            vm.BeginRenameDrawer = BeginRenameDrawer;
             Width = vm.SidebarWidth;
             if (vm.ReserveDesktopSpace) { _appBar.Dock(); return; }
         }
@@ -149,6 +154,20 @@ public partial class MainWindow : Window
 
     private void HideButton_Click(object sender, RoutedEventArgs e) => Hide();
 
+    /// <summary>
+    /// A new drawer just opened in the reel view. The reel is shown via a binding, so
+    /// its name box isn't laid out yet — wait for that pass, then select the whole name
+    /// so the user can rename it by just typing, without reaching for the mouse.
+    /// </summary>
+    private void BeginRenameDrawer()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            ReelNameBox.Focus();
+            ReelNameBox.SelectAll();
+        }), DispatcherPriority.Background);
+    }
+
     /// <summary>Ctrl+V pastes the clipboard into the current drawer — unless a text field is focused.</summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -213,16 +232,90 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    // ----- dragging a drawer row onto another reorders it -----
+
+    private void DrawerRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // A press that starts on the 🗑 (or any nested button) must not begin a reorder —
+        // let it click through to delete instead.
+        if (PressedOnNestedButton(e.OriginalSource as DependencyObject, sender))
+        {
+            _dragDrawer = null;
+            return;
+        }
+        _drawerDragStart = e.GetPosition(this);
+        _dragDrawer = (sender as FrameworkElement)?.DataContext as Drawer;
+    }
+
+    /// <summary>True when the hit element sits inside a button nested within the row button.</summary>
+    private static bool PressedOnNestedButton(DependencyObject? origin, object rowButton)
+    {
+        var node = origin;
+        while (node != null && node != rowButton)
+        {
+            if (node is System.Windows.Controls.Primitives.ButtonBase) return true;
+            // Text hits (Run/InlineText) aren't visuals — VisualTreeHelper.GetParent would throw.
+            node = node is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(node)
+                : LogicalTreeHelper.GetParent(node);
+        }
+        return false;
+    }
+
+    private void DrawerRow_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_dragDrawer == null || e.LeftButton != MouseButtonState.Pressed) return;
+
+        var position = e.GetPosition(this);
+        if (Math.Abs(position.X - _drawerDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(position.Y - _drawerDragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        var drawer = _dragDrawer;
+        _dragDrawer = null;
+        var data = new DataObject();
+        data.SetData(DrawerDragFormat, drawer.Id);
+        DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
+    }
+
     private void DrawerRow_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = AcceptsDrop(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+        DragDropEffects effects;
+        if (e.Data.GetData(DrawerDragFormat) is string draggedId)
+        {
+            // Reorder is valid only when hovering a *different* drawer than the one being dragged.
+            var over = (sender as FrameworkElement)?.DataContext as Drawer;
+            effects = over != null && over.Id != draggedId ? DragDropEffects.Move : DragDropEffects.None;
+        }
+        else
+        {
+            effects = AcceptsDrop(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+        }
+
+        e.Effects = effects;
+        if (sender is DependencyObject row)
+            Behaviors.DragDropCue.SetIsDropTarget(row, effects != DragDropEffects.None);
         e.Handled = true;
+    }
+
+    private void DrawerRow_DragLeave(object sender, DragEventArgs e)
+    {
+        if (sender is DependencyObject row) Behaviors.DragDropCue.SetIsDropTarget(row, false);
     }
 
     private void DrawerRow_Drop(object sender, DragEventArgs e)
     {
+        if (sender is DependencyObject row) Behaviors.DragDropCue.SetIsDropTarget(row, false);
         if (ViewModel is not { } vm) return;
         if ((sender as FrameworkElement)?.DataContext is not Drawer drawer) return;
+        if (e.Data.GetData(DrawerDragFormat) is string draggedId)
+        {
+            vm.ReorderDrawer(draggedId, drawer);
+            e.Handled = true;
+            return;
+        }
         HandleExternalDrop(e, drawer);
         e.Handled = true;
     }
@@ -244,7 +337,8 @@ public partial class MainWindow : Window
 
     private void Window_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetDataPresent(ClipDragFormat)) return; // internal drag that missed a drawer
+        if (e.Data.GetDataPresent(ClipDragFormat)) return; // internal clip drag that missed a drawer
+        if (e.Data.GetDataPresent(DrawerDragFormat)) return; // drawer reorder that missed a row
         HandleExternalDrop(e, null);
     }
 
@@ -350,6 +444,7 @@ public partial class MainWindow : Window
     private void Window_PreviewDragOver(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent(ClipDragFormat)) return; // internal filing drag
+        if (e.Data.GetDataPresent(DrawerDragFormat)) return; // internal drawer reorder
         if (!AcceptsDrop(e.Data)) return;
 
         _dropOverlayHideTimer?.Stop();

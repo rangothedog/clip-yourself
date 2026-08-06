@@ -70,7 +70,7 @@ public class StorageService
                 try { File.Move(file, file + ".corrupt", true); } catch { }
             }
         }
-        return drawers.OrderByDescending(d => d.CreatedAt).ToList();
+        return drawers.OrderBy(d => d.Order).ThenByDescending(d => d.CreatedAt).ToList();
     }
 
     public void SaveDrawer(Drawer drawer)

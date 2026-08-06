@@ -1,8 +1,8 @@
 import Reveal from "./Reveal";
 
 export default function Download() {
-  const installerName = "ClipYourself-1.0.2-win-x64.msi";
-  const portableName = "ClipYourself-1.0.2-win-x64-portable.zip";
+  const installerName = "ClipYourself-1.0.3-win-x64.msi";
+  const portableName = "ClipYourself-1.0.3-win-x64-portable.zip";
 
   return (
     <section className="section section--panel" id="download">
@@ -41,11 +41,11 @@ export default function Download() {
                 Self-contained — no .NET install needed. You can also grab this
                 build from the{" "}
                 <a
-                  href="https://github.com/rangothedog/clip-yourself/releases/tag/v1.0.2"
+                  href="https://github.com/rangothedog/clip-yourself/releases/tag/v1.0.3"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  v1.0.2 release on GitHub
+                  v1.0.3 release on GitHub
                 </a>
                 , or build from{" "}
                 <a
