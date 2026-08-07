@@ -4,6 +4,8 @@
 #   3. creates a portable ZIP from the publish output
 #   4. generates SHA-256 checksums for release artifacts
 #   5. copies artifacts into the website's downloads folder when present
+#   6. builds the marketing site and packages it as clip-yourself.zip for deployment
+#      (skipped when npm isn't on PATH)
 #
 # Code signing (removes the "Unknown publisher" UAC warning) is optional: pass the
 # thumbprint of a code-signing certificate for "Rango Studio LLC" installed in the
@@ -73,8 +75,40 @@ Write-Host "==> Checksums: $checksumsPath"
 
 $downloads = "$root\website\public\downloads"
 if (Test-Path $downloads) {
+    # Keep only the current release in the site's downloads folder so the deploy
+    # bundle never ships stale installers from earlier versions.
+    Get-ChildItem $downloads -File |
+        Where-Object { $_.Extension -in '.msi', '.zip' } |
+        Remove-Item -Force
     Copy-Item $msi.FullName $downloads -Force
     Copy-Item $portableZip $downloads -Force
     Copy-Item $checksumsPath $downloads -Force
     Write-Host "==> Copied to $downloads"
+
+    # Build the marketing site and package it for deployment. Named clip-yourself.zip
+    # so Explorer's "Extract All" drops it into a clip-yourself\ folder.
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        Push-Location "$root\website"
+        # npm/tsc/vite write progress to stderr; on PowerShell 7.4+ that trips
+        # native-command error handling under $ErrorActionPreference='Stop'. Judge
+        # success by the exit code instead.
+        $PSNativeCommandUseErrorActionPreference = $false
+        try {
+            Write-Host "==> Building website..."
+            # Run through cmd: the npm.ps1 shim mangles args when called via '& npm'.
+            cmd /c "npm run build"
+            if ($LASTEXITCODE -ne 0) { throw "website build failed" }
+
+            $siteZip = "$root\clip-yourself.zip"
+            if (Test-Path $siteZip) { Remove-Item $siteZip -Force }
+            Compress-Archive -Path "$root\website\dist\*" -DestinationPath $siteZip -CompressionLevel Optimal
+            Write-Host "==> Site package: $siteZip ($([Math]::Round((Get-Item $siteZip).Length / 1MB, 1)) MB)"
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    else {
+        Write-Host "==> npm not found on PATH; skipping site package (clip-yourself.zip)"
+    }
 }
