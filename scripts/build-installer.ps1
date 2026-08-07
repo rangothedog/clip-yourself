@@ -43,7 +43,8 @@ Write-Host "==> Building MSI..."
 dotnet build "$root\installer\ClipYourself.Installer.wixproj" -c Release
 if ($LASTEXITCODE -ne 0) { throw "MSI build failed" }
 
-$msi = Get-ChildItem "$root\installer\bin\Release\*.msi" | Select-Object -First 1
+# Newest by write time: the one WiX just built, even if older-version MSIs linger.
+$msi = Get-ChildItem "$root\installer\bin\Release\*.msi" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 # Sign the MSI itself
 Invoke-Sign $msi.FullName
@@ -52,6 +53,11 @@ Write-Host "==> MSI: $($msi.FullName) ($([Math]::Round($msi.Length / 1MB, 1)) MB
 
 $releaseDir = Split-Path $msi.FullName -Parent
 $portableZip = Join-Path $releaseDir ("{0}-portable.zip" -f $msi.BaseName)
+
+# Drop artifacts from earlier versions so the release dir only holds the current build.
+Get-ChildItem $releaseDir -File |
+    Where-Object { $_.Extension -in '.msi', '.zip', '.wixpdb' -and $_.BaseName -notlike "$($msi.BaseName)*" } |
+    Remove-Item -Force
 
 if (Test-Path $portableZip) {
     Remove-Item $portableZip -Force
