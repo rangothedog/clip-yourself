@@ -76,6 +76,10 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                        <TextBlock Text="✓" FontWeight="Bold" FontSize="13" Margin="0,0,6,0"
+                                   VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}"
+                                   ToolTip="Selected — drag to a drawer, or press Delete"
+                                   Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}"/>
                         <Button Content="📌" Width="22" Height="22" FontSize="10"
                                 ToolTip="Pin (stays on top, never auto-evicted)"
                                 Command="{Binding DataContext.TogglePinCommand, RelativeSource={RelativeSource AncestorType=Window}}"

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace ClipYourself.Core.Models;
 
@@ -6,6 +7,7 @@ public class ClipItem : INotifyPropertyChanged
 {
     private DateTime _lastCopiedAt;
     private bool _pinned;
+    private bool _isSelected;
 
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
@@ -45,6 +47,19 @@ public class ClipItem : INotifyPropertyChanged
             if (_pinned == value) return;
             _pinned = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pinned)));
+        }
+    }
+
+    /// <summary>Transient multi-select state (drag/delete many at once); never persisted.</summary>
+    [JsonIgnore]
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
         }
     }
 

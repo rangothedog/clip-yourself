@@ -20,6 +20,7 @@
         <SolidColorBrush x:Key="FilmBrush" Color="#FF0B0D10"/>
         <SolidColorBrush x:Key="IconBgBrush" Color="#FF323A45"/>
         <SolidColorBrush x:Key="IconBgHoverBrush" Color="#FF415062"/>
+        <SolidColorBrush x:Key="SelectedBrush" Color="#FF213453"/>
 
         <!-- Converters -->
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -260,6 +261,12 @@
                                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource CardHoverBrush}"/>
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                             </Trigger>
+                            <!-- Multi-select: takes precedence over hover so a selected card reads clearly -->
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource SelectedBrush}"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="Chrome" Property="BorderThickness" Value="2"/>
+                            </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>

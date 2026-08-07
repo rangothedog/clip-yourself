@@ -168,14 +168,27 @@ public partial class MainWindow : Window
         }), DispatcherPriority.Background);
     }
 
-    /// <summary>Ctrl+V pastes the clipboard into the current drawer — unless a text field is focused.</summary>
+    /// <summary>Ctrl+V pastes into the current drawer; Delete removes selected clips — unless a text field is focused.</summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.V || (Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control) return;
-        // Let rename boxes, the search field, and the hotkey capture handle their own paste.
+        // A focused text field (rename box, search, hotkey capture) owns these keys.
         if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase) return;
-        ViewModel?.PasteIntoCurrentDrawer();
-        e.Handled = true;
+
+        if (e.Key == Key.Delete)
+        {
+            if (ViewModel is { HasSelectedClips: true } vm)
+            {
+                vm.DeleteSelectedClips();
+                e.Handled = true;
+            }
+            return;
+        }
+
+        if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            ViewModel?.PasteIntoCurrentDrawer();
+            e.Handled = true;
+        }
     }
 
     private void HotkeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -191,6 +204,26 @@ public partial class MainWindow : Window
     {
         _dragStart = e.GetPosition(this);
         _dragClip = (sender as FrameworkElement)?.DataContext as ClipItem;
+        if (ViewModel is not { } vm || _dragClip is not { } clip) return;
+
+        // Shift/Ctrl are selection gestures — handle them here and mark the event handled
+        // so the card's click-to-copy Command doesn't also fire. A plain press just sets
+        // the anchor; the copy (and selection reset) happens on the click that follows.
+        var mods = Keyboard.Modifiers;
+        if ((mods & ModifierKeys.Shift) == ModifierKeys.Shift)
+        {
+            vm.RangeSelectTo(clip);
+            e.Handled = true;
+        }
+        else if ((mods & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            vm.ToggleClipSelection(clip);
+            e.Handled = true;
+        }
+        else
+        {
+            vm.SetSelectionAnchor(clip);
+        }
     }
 
     private void ClipCard_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -208,9 +241,13 @@ public partial class MainWindow : Window
         _dragClip = null;
         if (ViewModel is not { } vm) return;
 
+        // Grabbing a selected clip drags the whole selection; grabbing an unselected one drags just it.
+        var clips = clip.IsSelected ? vm.SelectedClipsInOrder() : new List<ClipItem> { clip };
+        if (clips.Count == 0) clips = new List<ClipItem> { clip };
+
         // Move is for internal reorder/file; Copy is for dropping out to Explorer
         // (copy-only there, so a shell drop can never relocate a blob or original).
-        DragDrop.DoDragDrop((DependencyObject)sender, vm.BuildDragData(clip),
+        DragDrop.DoDragDrop((DependencyObject)sender, vm.BuildDragData(clips),
             DragDropEffects.Copy | DragDropEffects.Move);
     }
 
@@ -226,9 +263,9 @@ public partial class MainWindow : Window
     private void ClipCard_Drop(object sender, DragEventArgs e)
     {
         if (ViewModel is not { } vm) return;
-        if (e.Data.GetData(ClipDragFormat) is not string clipId) return;
+        if (e.Data.GetData(ClipDragFormat) is not string idBlob) return;
         if ((sender as FrameworkElement)?.DataContext is not ClipItem target) return;
-        vm.ReorderClip(clipId, target);
+        vm.ReorderClips(idBlob.Split('\n', StringSplitOptions.RemoveEmptyEntries), target);
         e.Handled = true;
     }
 
@@ -347,9 +384,9 @@ public partial class MainWindow : Window
     {
         if (ViewModel is not { } vm) return;
 
-        if (e.Data.GetData(ClipDragFormat) is string clipId)
+        if (e.Data.GetData(ClipDragFormat) is string idBlob)
         {
-            vm.MoveClipToDrawer(clipId, target ?? vm.SessionDrawer);
+            vm.MoveClipsToDrawer(idBlob.Split('\n', StringSplitOptions.RemoveEmptyEntries), target ?? vm.SessionDrawer);
         }
         else if (e.Data.GetData(DataFormats.FileDrop) is string[] files)
         {

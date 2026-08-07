@@ -39,6 +39,7 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _hotkeyRegistered = true;
     private string _searchText = string.Empty;
     private bool _isCapturePaused;
+    private ClipItem? _selectionAnchor;
 
     public AppSettings Settings { get; }
 
@@ -157,6 +158,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             if (_searchText == value) return;
             _searchText = value;
+            ClearClipSelection(); // selection is scoped to the visible list
             Raise(nameof(SearchText));
             Raise(nameof(IsSearching));
             Raise(nameof(SearchResults));
@@ -197,6 +199,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             if (_openDrawer == value) return;
             _openDrawer = value;
+            ClearClipSelection(); // selection is scoped to the visible list
             Raise(nameof(OpenDrawer));
         }
     }
@@ -379,6 +382,9 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void CopyClip(ClipItem clip)
     {
+        // A plain click copies and collapses any multi-selection down to this clip.
+        ClearClipSelection();
+        _selectionAnchor = clip;
         _suppressCaptureUntil = DateTime.Now.AddMilliseconds(800);
         if (ClipboardWriter.TryWrite(clip))
         {
@@ -410,6 +416,69 @@ public class MainViewModel : INotifyPropertyChanged
         clip.Pinned = !clip.Pinned;
         var owner = FindOwner(clip);
         if (owner != null) DrawerOps.Reposition(owner, clip);
+        ScheduleSave();
+    }
+
+    // ----- multi-select -----
+
+    /// <summary>The clips currently on screen, in display order — the context for range selection.</summary>
+    private List<ClipItem> CurrentClips()
+    {
+        if (OpenDrawer != null) return OpenDrawer.Clips.ToList();
+        if (IsSearching) return SearchResults.Select(h => h.Clip).ToList();
+        return SessionDrawer.Clips.ToList();
+    }
+
+    public bool HasSelectedClips => AllDrawers().Any(d => d.Clips.Any(c => c.IsSelected));
+
+    /// <summary>Selected clips in the current display order (so a multi-drag keeps their order).</summary>
+    public List<ClipItem> SelectedClipsInOrder() => CurrentClips().Where(c => c.IsSelected).ToList();
+
+    /// <summary>Records where a subsequent Shift-range should start (set on a plain press).</summary>
+    public void SetSelectionAnchor(ClipItem clip) => _selectionAnchor = clip;
+
+    /// <summary>Ctrl-click: flip one clip's selection and make it the new range anchor.</summary>
+    public void ToggleClipSelection(ClipItem clip)
+    {
+        clip.IsSelected = !clip.IsSelected;
+        _selectionAnchor = clip;
+    }
+
+    /// <summary>Shift-click: select every clip between the anchor and this one (inclusive).</summary>
+    public void RangeSelectTo(ClipItem clip)
+    {
+        var list = CurrentClips();
+        var anchor = _selectionAnchor != null && list.Contains(_selectionAnchor) ? _selectionAnchor : clip;
+        var lo = list.IndexOf(anchor);
+        var hi = list.IndexOf(clip);
+        if (lo < 0 || hi < 0) return;
+        if (lo > hi) (lo, hi) = (hi, lo);
+
+        foreach (var c in list) c.IsSelected = false;
+        for (var i = lo; i <= hi; i++) list[i].IsSelected = true;
+        // Anchor stays put so dragging the shift further grows/shrinks from the same origin.
+    }
+
+    public void ClearClipSelection()
+    {
+        foreach (var drawer in AllDrawers())
+        foreach (var clip in drawer.Clips)
+            clip.IsSelected = false;
+        _selectionAnchor = null;
+    }
+
+    /// <summary>Delete-key handler: removes every selected clip across all drawers.</summary>
+    public void DeleteSelectedClips()
+    {
+        var selected = AllDrawers().SelectMany(d => d.Clips).Where(c => c.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        foreach (var clip in selected)
+            FindOwner(clip)?.Clips.Remove(clip);
+
+        _selectionAnchor = null;
+        _storage.SweepOrphanBlobs(AllDrawers());
+        ShowStatus($"Deleted {selected.Count} clip{(selected.Count == 1 ? "" : "s")}");
         ScheduleSave();
     }
 
@@ -586,10 +655,37 @@ public class MainViewModel : INotifyPropertyChanged
     /// temp file (CF_HDROP), plus text / bitmap / wave data where applicable.
     /// Drops are copy-only, so targets can never relocate blobs or originals.
     /// </summary>
-    public DataObject BuildDragData(ClipItem clip)
+    public DataObject BuildDragData(IReadOnlyList<ClipItem> clips)
     {
         var data = new DataObject();
-        data.SetData(ClipDragFormat, clip.Id);
+        // Internal filing format carries every dragged clip's id (newline-separated).
+        data.SetData(ClipDragFormat, string.Join("\n", clips.Select(c => c.Id)));
+        try
+        {
+            if (clips.Count == 1)
+            {
+                PopulateShellPayload(data, clips[0]);
+            }
+            else
+            {
+                // Multi-drag out to the shell: hand over every file, plus joined text.
+                var files = new System.Collections.Specialized.StringCollection();
+                var texts = new List<string>();
+                foreach (var clip in clips) CollectShellFiles(clip, files, texts);
+                if (files.Count > 0) data.SetFileDropList(files);
+                if (texts.Count > 0) data.SetText(string.Join(Environment.NewLine, texts));
+            }
+        }
+        catch
+        {
+            // Fall back to an internal-only drag rather than failing the gesture.
+        }
+        return data;
+    }
+
+    /// <summary>Rich single-clip shell payload: text/bitmap/wave plus a friendly-named temp file.</summary>
+    private void PopulateShellPayload(DataObject data, ClipItem clip)
+    {
         try
         {
             switch (clip.Kind)
@@ -657,9 +753,68 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch
         {
-            // Fall back to an internal-only drag rather than failing the gesture.
+            // Best-effort: an internal-only drag beats failing the gesture.
         }
-        return data;
+    }
+
+    /// <summary>Collects a clip's shell files (temp copies) and any text for an aggregated multi-drag.</summary>
+    private void CollectShellFiles(ClipItem clip, System.Collections.Specialized.StringCollection files, List<string> texts)
+    {
+        try
+        {
+            switch (clip.Kind)
+            {
+                case ClipKind.Text:
+                    var text = clip.Text ?? clip.PreviewText;
+                    texts.Add(text);
+                    files.Add(WriteDragFile(clip.Id, MakeFileName(clip.PreviewText, ".txt"), Encoding.UTF8.GetBytes(text)));
+                    break;
+
+                case ClipKind.Image:
+                    if (clip.ImagePath != null && File.Exists(clip.ImagePath))
+                    {
+                        var imageName = clip.FilePaths.Count > 0
+                            ? Path.GetFileName(clip.FilePaths[0])
+                            : MakeFileName("clip-image", Path.GetExtension(clip.ImagePath));
+                        files.Add(CopyDragFile(clip.Id, clip.ImagePath, imageName));
+                    }
+                    break;
+
+                case ClipKind.Audio:
+                    var source = clip.AudioPath != null && File.Exists(clip.AudioPath)
+                        ? clip.AudioPath
+                        : clip.FilePaths.FirstOrDefault(File.Exists);
+                    if (source != null)
+                    {
+                        var info = new FileInfo(source);
+                        files.Add(info.Length <= MaxDragTempCopyBytes
+                            ? CopyDragFile(clip.Id, source, MakeFileName(clip.Text ?? "clip-audio", Path.GetExtension(source)))
+                            : source);
+                    }
+                    break;
+
+                case ClipKind.Video:
+                    var vsource = clip.FilePaths.FirstOrDefault(File.Exists)
+                        ?? (clip.VideoPath != null && File.Exists(clip.VideoPath) ? clip.VideoPath : null);
+                    if (vsource != null)
+                    {
+                        var info = new FileInfo(vsource);
+                        files.Add(info.Length <= MaxDragTempCopyBytes
+                            ? CopyDragFile(clip.Id, vsource, MakeFileName(clip.Text ?? "clip-video", Path.GetExtension(vsource)))
+                            : vsource);
+                    }
+                    break;
+
+                case ClipKind.Files:
+                    foreach (var p in clip.FilePaths.Where(p => File.Exists(p) || Directory.Exists(p)))
+                        files.Add(p);
+                    break;
+            }
+        }
+        catch
+        {
+            // Skip a clip that can't be materialized rather than aborting the whole drag.
+        }
     }
 
     private static string WriteDragFile(string clipId, string fileName, byte[] bytes)
@@ -755,6 +910,52 @@ public class MainViewModel : INotifyPropertyChanged
         owner.Clips.Remove(clip);
         var result = DrawerOps.AddClip(target, clip);
         ReportLimits(target, result, $"Moved to {target.Name}");
+        ScheduleSave();
+    }
+
+    /// <summary>Files several clips into a drawer at once (multi-select drag). Single id defers to the rich single move.</summary>
+    public void MoveClipsToDrawer(IReadOnlyList<string> clipIds, Drawer target)
+    {
+        if (clipIds.Count == 1) { MoveClipToDrawer(clipIds[0], target); return; }
+
+        var moved = 0;
+        foreach (var id in clipIds)
+        {
+            var owner = AllDrawers().FirstOrDefault(d => d.Clips.Any(c => c.Id == id));
+            var clip = owner?.Clips.FirstOrDefault(c => c.Id == id);
+            if (owner == null || clip == null || owner == target) continue;
+            owner.Clips.Remove(clip);
+            DrawerOps.AddClip(target, clip);
+            clip.IsSelected = false;
+            moved++;
+        }
+
+        if (moved == 0) return;
+        _selectionAnchor = null;
+        _storage.SweepOrphanBlobs(AllDrawers());
+        ShowStatus($"Moved {moved} clip{(moved == 1 ? "" : "s")} to {target.Name}");
+        ScheduleSave();
+    }
+
+    /// <summary>Drops several dragged clips at a target clip's slot. Single id defers to the straight reorder.</summary>
+    public void ReorderClips(IReadOnlyList<string> clipIds, ClipItem targetClip)
+    {
+        if (clipIds.Count == 1) { ReorderClip(clipIds[0], targetClip); return; }
+
+        var targetDrawer = AllDrawers().FirstOrDefault(d => d.Clips.Contains(targetClip));
+        if (targetDrawer == null) return;
+
+        foreach (var id in clipIds)
+        {
+            var owner = AllDrawers().FirstOrDefault(d => d.Clips.Any(c => c.Id == id));
+            var clip = owner?.Clips.FirstOrDefault(c => c.Id == id);
+            if (owner == null || clip == null || clip == targetClip) continue;
+            owner.Clips.Remove(clip);
+            var at = Math.Clamp(targetDrawer.Clips.IndexOf(targetClip), 0, targetDrawer.Clips.Count);
+            targetDrawer.Clips.Insert(at, clip);
+            clip.IsSelected = false;
+        }
+        _selectionAnchor = null;
         ScheduleSave();
     }
 
