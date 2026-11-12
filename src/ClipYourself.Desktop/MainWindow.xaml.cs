@@ -154,6 +154,83 @@ public partial class MainWindow : Window
 
     private void HideButton_Click(object sender, RoutedEventArgs e) => Hide();
 
+    // ----- 🎯 drag onto any app's text field to type into it -----
+
+    private Interop.TextFieldPicker? _picker;
+    private CancellationTokenSource? _typingCancel;
+
+    private void TypePicker_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true; // don't let the header turn this into a window drag
+        if (_picker != null) return;
+        _typingCancel?.Cancel(); // starting a new drag stops a long run still typing
+
+        // Capture keeps mouse moves flowing to us while the cursor is over other apps.
+        _picker = new Interop.TextFieldPicker();
+        Mouse.OverrideCursor = Cursors.Cross;
+        TypePicker.CaptureMouse();
+    }
+
+    private void TypePicker_MouseMove(object sender, MouseEventArgs e) => _picker?.Track();
+
+    private async void TypePicker_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        var picker = _picker;
+        if (picker == null) return;
+        _picker = null; // detach first: releasing capture raises LostMouseCapture
+        TypePicker.ReleaseMouseCapture();
+        Mouse.OverrideCursor = null;
+        e.Handled = true;
+
+        try
+        {
+            var target = await picker.CompleteAsync();
+            if (ViewModel is not { } vm) return;
+            if (target == null)
+            {
+                vm.Notify("No text field there — drop 🎯 onto a text box");
+                return;
+            }
+
+            var text = vm.TextToType();
+            if (string.IsNullOrEmpty(text))
+            {
+                vm.Notify("Nothing to type — copy or select some text first");
+                return;
+            }
+
+            _typingCancel = new CancellationTokenSource();
+            var cancel = _typingCancel.Token;
+            if (text.Length > 200) vm.Notify("⌨ Typing… (Esc to stop)");
+            var result = await Task.Run(() => target.FocusAndType(text, cancel));
+            vm.Notify(result switch
+            {
+                Interop.TypeResult.Typed => $"⌨ Typed {text.Length:N0} character{(text.Length == 1 ? "" : "s")}",
+                Interop.TypeResult.Cancelled => "Typing stopped",
+                Interop.TypeResult.Blocked => "That window blocked typing (it may be running as administrator)",
+                Interop.TypeResult.FocusFailed => "Couldn't bring that window forward — nothing typed",
+                _ => "That text field went away"
+            });
+        }
+        finally
+        {
+            picker.Dispose();
+        }
+    }
+
+    /// <summary>Capture yanked away mid-drag (Alt+Tab, Esc, another app) — abandon the pick.</summary>
+    private void TypePicker_LostMouseCapture(object sender, MouseEventArgs e) => CancelTypePicker();
+
+    private void CancelTypePicker()
+    {
+        if (_picker == null) return;
+        var picker = _picker;
+        _picker = null;
+        Mouse.OverrideCursor = null;
+        if (TypePicker.IsMouseCaptured) TypePicker.ReleaseMouseCapture();
+        picker.Dispose();
+    }
+
     /// <summary>
     /// A new drawer just opened in the reel view. The reel is shown via a binding, so
     /// its name box isn't laid out yet — wait for that pass, then select the whole name
@@ -171,6 +248,13 @@ public partial class MainWindow : Window
     /// <summary>Ctrl+V pastes into the current drawer; Delete removes selected clips — unless a text field is focused.</summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && _picker != null)
+        {
+            CancelTypePicker();
+            e.Handled = true;
+            return;
+        }
+
         // A focused text field (rename box, search, hotkey capture) owns these keys.
         if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase) return;
 

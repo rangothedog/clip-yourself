@@ -1024,6 +1024,28 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Text for the "type into a field" picker: the selected text clips (in display order,
+    /// one per line) when any are selected, otherwise whatever text is on the clipboard.
+    /// </summary>
+    public string? TextToType()
+    {
+        var selected = SelectedClipsInOrder()
+            .Where(c => c.Kind == ClipKind.Text && !string.IsNullOrEmpty(c.Text))
+            .Select(c => c.Text!)
+            .ToList();
+        if (selected.Count > 0) return string.Join(Environment.NewLine, selected);
+
+        try
+        {
+            if (Clipboard.ContainsText()) return Clipboard.GetText();
+        }
+        catch (System.Runtime.InteropServices.ExternalException) { } // clipboard locked by another app
+        return null;
+    }
+
+    public void Notify(string message) => ShowStatus(message);
+
     private void ShowStatus(string message)
     {
         StatusText = message;

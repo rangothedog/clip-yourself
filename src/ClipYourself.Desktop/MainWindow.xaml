@@ -185,9 +185,10 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="⠿" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"
+                <DockPanel VerticalAlignment="Center" LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left" Text="⠿" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"
                                Foreground="{StaticResource SubTextBrush}" ToolTip="Drag to move the sidebar">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
@@ -200,12 +201,50 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <Image Source="/Assets/Clipyourself.ico" Width="24" Height="24" Margin="0,0,8,0"
+                    <Image DockPanel.Dock="Left" Source="/Assets/Clipyourself.ico" Width="24" Height="24" Margin="0,0,8,0"
                            RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
-                    <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold"
+                    <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-                <ToggleButton Grid.Column="1" IsChecked="{Binding IsCapturePaused}">
+                </DockPanel>
+                <!-- Type-into-field picker: press, drag onto any text box in any app, release
+                     to type the clipboard (or selected text clips) there as keystrokes. -->
+                <Border x:Name="TypePicker" Grid.Column="1" Width="30" Height="28" Margin="4,0,0,0"
+                        CornerRadius="6" Cursor="Cross"
+                        ToolTip="Drag onto any text field to type the clipboard into it (selected text clips win; Esc cancels)"
+                        PreviewMouseLeftButtonDown="TypePicker_PreviewMouseLeftButtonDown"
+                        MouseMove="TypePicker_MouseMove"
+                        MouseLeftButtonUp="TypePicker_MouseLeftButtonUp"
+                        LostMouseCapture="TypePicker_LostMouseCapture">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{StaticResource IconBgBrush}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource IconBgHoverBrush}"/>
+                                </Trigger>
+                                <!-- Mouse is captured for the whole drag: show it "armed" -->
+                                <Trigger Property="IsMouseCaptured" Value="True">
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="🎯" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMouseCaptured, ElementName=TypePicker}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+                <ToggleButton Grid.Column="2" IsChecked="{Binding IsCapturePaused}">
                     <ToggleButton.Style>
                         <Style TargetType="ToggleButton" BasedOn="{StaticResource ToggleIconButton}">
                             <Setter Property="Content" Value="⏸"/>
@@ -219,12 +258,12 @@
                         </Style>
                     </ToggleButton.Style>
                 </ToggleButton>
-                <ToggleButton Grid.Column="2" Content="📌" Style="{StaticResource ToggleIconButton}"
+                <ToggleButton Grid.Column="3" Content="📌" Style="{StaticResource ToggleIconButton}"
                               ToolTip="Keep sidebar on top"
                               IsChecked="{Binding AlwaysOnTop}"/>
-                <Button Grid.Column="3" Content="⚙" Style="{StaticResource IconButton}"
+                <Button Grid.Column="4" Content="⚙" Style="{StaticResource IconButton}"
                         ToolTip="Settings" Command="{Binding ToggleSettingsCommand}"/>
-                <Button Grid.Column="4" Content="—" Style="{StaticResource IconButton}"
+                <Button Grid.Column="5" Content="—" Style="{StaticResource IconButton}"
                         ToolTip="Hide (Ctrl+Alt+V to bring back)" Click="HideButton_Click"/>
             </Grid>
         </Border>
