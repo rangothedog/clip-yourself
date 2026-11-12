@@ -20,6 +20,43 @@
 
     <Window.Resources>
 
+        <!-- 🎯 type-into-field picker (sidebar header and reel header): press, drag onto any
+             text box in any app, release to type the clipboard (or selected text clips) there
+             as keystrokes. The mouse stays captured for the whole drag, so it reads "armed". -->
+        <Style x:Key="TypePickerStyle" TargetType="ContentControl">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Cross"/>
+            <Setter Property="ToolTip" Value="Drag onto any text field to type the clipboard into it (selected text clips win; Esc cancels)"/>
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TypePicker_PreviewMouseLeftButtonDown"/>
+            <EventSetter Event="MouseMove" Handler="TypePicker_MouseMove"/>
+            <EventSetter Event="MouseLeftButtonUp" Handler="TypePicker_MouseLeftButtonUp"/>
+            <EventSetter Event="LostMouseCapture" Handler="TypePicker_LostMouseCapture"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <Border x:Name="Chrome" Background="{StaticResource IconBgBrush}" CornerRadius="6"
+                                BorderBrush="{StaticResource AccentBrush}" BorderThickness="0">
+                            <TextBlock x:Name="Glyph" Text="🎯" FontSize="13"
+                                       Foreground="{StaticResource TextBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource IconBgHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseCaptured" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderThickness" Value="1"/>
+                                <Setter TargetName="Glyph" Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- One clipboard entry, used by the sidebar list, the reel, and search results -->
         <DataTemplate x:Key="ClipCardTemplate">
             <Button Style="{StaticResource CardButton}"
@@ -206,44 +243,7 @@
                     <TextBlock Text="Clip Yourself" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                 </DockPanel>
-                <!-- Type-into-field picker: press, drag onto any text box in any app, release
-                     to type the clipboard (or selected text clips) there as keystrokes. -->
-                <Border x:Name="TypePicker" Grid.Column="1" Width="30" Height="28" Margin="4,0,0,0"
-                        CornerRadius="6" Cursor="Cross"
-                        ToolTip="Drag onto any text field to type the clipboard into it (selected text clips win; Esc cancels)"
-                        PreviewMouseLeftButtonDown="TypePicker_PreviewMouseLeftButtonDown"
-                        MouseMove="TypePicker_MouseMove"
-                        MouseLeftButtonUp="TypePicker_MouseLeftButtonUp"
-                        LostMouseCapture="TypePicker_LostMouseCapture">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="{StaticResource IconBgBrush}"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource IconBgHoverBrush}"/>
-                                </Trigger>
-                                <!-- Mouse is captured for the whole drag: show it "armed" -->
-                                <Trigger Property="IsMouseCaptured" Value="True">
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <TextBlock Text="🎯" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsMouseCaptured, ElementName=TypePicker}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </Border>
+                <ContentControl Grid.Column="1" Style="{StaticResource TypePickerStyle}"/>
                 <ToggleButton Grid.Column="2" IsChecked="{Binding IsCapturePaused}">
                     <ToggleButton.Style>
                         <Style TargetType="ToggleButton" BasedOn="{StaticResource ToggleIconButton}">
@@ -407,6 +407,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Button Content="←" Style="{StaticResource IconButton}" ToolTip="Back to sidebar"
                                 Command="{Binding DataContext.CloseReelCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
@@ -422,14 +423,15 @@
                                          Foreground="{Binding UsageFraction, Converter={StaticResource UsageToBrush}}"
                                          ToolTip="How full this drawer is — fills green→red as it nears its clip/size limit"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Content="📋" Style="{StaticResource IconButton}"
+                        <ContentControl Grid.Column="2" Style="{StaticResource TypePickerStyle}"/>
+                        <Button Grid.Column="3" Content="📋" Style="{StaticResource IconButton}"
                                 ToolTip="Paste the clipboard into this drawer (Ctrl+V)"
                                 Command="{Binding DataContext.PasteCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                        <Button Grid.Column="3" Content="🧹" Style="{StaticResource DangerIconButton}"
+                        <Button Grid.Column="4" Content="🧹" Style="{StaticResource DangerIconButton}"
                                 ToolTip="Clear all clips in this drawer"
                                 Command="{Binding DataContext.ClearDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}"/>
-                        <Button Grid.Column="4" Content="🗑" ToolTip="Delete this drawer"
+                        <Button Grid.Column="5" Content="🗑" ToolTip="Delete this drawer"
                                 Command="{Binding DataContext.DeleteDrawerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 CommandParameter="{Binding}">
                             <Button.Style>

@@ -157,18 +157,20 @@ public partial class MainWindow : Window
     // ----- 🎯 drag onto any app's text field to type into it -----
 
     private Interop.TextFieldPicker? _picker;
+    private UIElement? _pickerHost; // whichever 🎯 (sidebar or reel header) started the drag
     private CancellationTokenSource? _typingCancel;
 
     private void TypePicker_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true; // don't let the header turn this into a window drag
-        if (_picker != null) return;
+        if (_picker != null || sender is not UIElement host) return;
         _typingCancel?.Cancel(); // starting a new drag stops a long run still typing
 
         // Capture keeps mouse moves flowing to us while the cursor is over other apps.
         _picker = new Interop.TextFieldPicker();
+        _pickerHost = host;
         Mouse.OverrideCursor = Cursors.Cross;
-        TypePicker.CaptureMouse();
+        host.CaptureMouse();
     }
 
     private void TypePicker_MouseMove(object sender, MouseEventArgs e) => _picker?.Track();
@@ -178,7 +180,8 @@ public partial class MainWindow : Window
         var picker = _picker;
         if (picker == null) return;
         _picker = null; // detach first: releasing capture raises LostMouseCapture
-        TypePicker.ReleaseMouseCapture();
+        _pickerHost?.ReleaseMouseCapture();
+        _pickerHost = null;
         Mouse.OverrideCursor = null;
         e.Handled = true;
 
@@ -227,7 +230,8 @@ public partial class MainWindow : Window
         var picker = _picker;
         _picker = null;
         Mouse.OverrideCursor = null;
-        if (TypePicker.IsMouseCaptured) TypePicker.ReleaseMouseCapture();
+        if (_pickerHost?.IsMouseCaptured == true) _pickerHost.ReleaseMouseCapture();
+        _pickerHost = null;
         picker.Dispose();
     }
 

@@ -41,13 +41,13 @@ export default function TypeAnywhere() {
         </Reveal>
 
         <Reveal className="type-anywhere__copy" delay={120}>
-          <p className="pill">🎯 New in 1.0.5</p>
+          <p className="pill">🎯 New in 1.0.6</p>
           <h2 className="type-anywhere__title">
             Drag, drop, and <span className="accent">it types itself</span>
           </h2>
           <p className="section__sub">
-            Grab the 🎯 target at the top of the sidebar and drag it onto any
-            text box in any app. A focus reticle locks onto the field under your
+            Grab the 🎯 target at the top of the sidebar (or of any open
+            drawer) and drag it onto any text box in any app. A focus reticle locks onto the field under your
             cursor. Let go, and Clip Yourself types your clip into it, one
             keystroke at a time.
           </p>
