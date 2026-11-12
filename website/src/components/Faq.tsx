@@ -51,6 +51,19 @@ const FAQS: QA[] = [
     ),
   },
   {
+    q: "Why does 🎯 type the text instead of pasting it?",
+    a: (
+      <p>
+        Typing works where pasting doesn&rsquo;t. Plenty of forms block paste
+        (confirm-your-email boxes, some bank and shipping sites), and remote
+        desktops or terminals often mangle it. Typing also leaves your
+        clipboard alone, so whatever you copied last is still there. Drag the
+        🎯 button at the top of the sidebar onto any text field, then let go.
+        If a long clip is still typing, <kbd>Esc</kbd> stops it.
+      </p>
+    ),
+  },
+  {
     q: "Is there a browser extension?",
     a: (
       <p>

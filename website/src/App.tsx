@@ -1,6 +1,7 @@
 import Nav from "./components/Nav";
 import Hero from "./components/Hero";
 import Features from "./components/Features";
+import TypeAnywhere from "./components/TypeAnywhere";
 import ReelShowcase from "./components/ReelShowcase";
 import AudioSection from "./components/AudioSection";
 import DawTeaser from "./components/DawTeaser";
@@ -15,6 +16,7 @@ export default function App() {
       <main>
         <Hero />
         <Features />
+        <TypeAnywhere />
         <ReelShowcase />
         <AudioSection />
         <DawTeaser />

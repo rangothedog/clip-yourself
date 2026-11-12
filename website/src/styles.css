@@ -802,6 +802,201 @@ kbd {
   }
 }
 
+/* ===== Type anywhere (🎯 drag-to-type) ===== */
+.type-anywhere__inner {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 56px;
+  align-items: center;
+}
+
+.type-anywhere__title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.type-anywhere__list {
+  margin: 0 0 1.4em;
+  padding-left: 1.2em;
+}
+
+.type-anywhere__list li {
+  margin-bottom: 0.5em;
+}
+
+.type-anywhere__honest {
+  color: var(--subtext);
+  font-size: 0.92rem;
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+  margin: 0;
+}
+
+.type-demo {
+  padding: 0;
+  overflow: visible;
+  box-shadow: 0 0 40px rgba(79, 140, 255, 0.12);
+}
+
+.type-demo__titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.type-demo__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.type-demo__title {
+  margin-left: 8px;
+  font-size: 0.82rem;
+  color: var(--subtext);
+}
+
+.type-demo__body {
+  padding: 22px 24px 20px;
+}
+
+.type-demo__label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--subtext);
+  margin-bottom: 6px;
+}
+
+.type-demo__field {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  min-height: 2.6em;
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.type-demo__field--idle {
+  color: var(--subtext);
+  margin-bottom: 20px;
+}
+
+/* The reticle: outline + pulsing corner brackets + tag, like the desktop app */
+.type-demo__target {
+  position: relative;
+}
+
+.type-demo__field--live {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  background: rgba(79, 140, 255, 0.08);
+}
+
+.type-demo__corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--accent);
+  animation: reticle-pulse 1.1s ease-in-out infinite alternate;
+}
+
+.type-demo__corner--tl { top: -7px; left: -7px; border-width: 3px 0 0 3px; border-top-left-radius: 4px; }
+.type-demo__corner--tr { top: -7px; right: -7px; border-width: 3px 3px 0 0; border-top-right-radius: 4px; }
+.type-demo__corner--bl { bottom: -7px; left: -7px; border-width: 0 0 3px 3px; border-bottom-left-radius: 4px; }
+.type-demo__corner--br { bottom: -7px; right: -7px; border-width: 0 3px 3px 0; border-bottom-right-radius: 4px; }
+
+.type-demo__tag {
+  position: absolute;
+  right: -7px;
+  top: -30px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 8px;
+}
+
+.type-demo__typed {
+  --chars: 23;
+  display: inline-block;
+  vertical-align: bottom;
+  overflow: hidden;
+  width: 0;
+  color: var(--text);
+  border-right: 2px solid var(--accent);
+  animation:
+    type-in 6s steps(var(--chars)) infinite,
+    caret-blink 0.8s step-end infinite;
+}
+
+.type-demo__picker {
+  position: absolute;
+  right: 26px;
+  bottom: -18px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  font-size: 1rem;
+}
+
+.type-demo__note {
+  margin: 24px 0 0;
+  font-size: 0.78rem;
+  color: var(--subtext);
+}
+
+@keyframes type-in {
+  0%,
+  12% { width: 0; }
+  62%,
+  100% { width: calc(var(--chars) * 1ch); }
+}
+
+@keyframes caret-blink {
+  50% { border-right-color: transparent; }
+}
+
+@keyframes reticle-pulse {
+  to { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .type-demo__typed {
+    animation: none;
+    width: auto;
+  }
+
+  .type-demo__corner {
+    animation: none;
+  }
+}
+
+@media (max-width: 880px) {
+  .type-anywhere__inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  /* Copy first on narrow screens; the demo follows it */
+  .type-anywhere__copy {
+    order: -1;
+  }
+}
+
 /* ===== DAW teaser ===== */
 .daw-card {
   text-align: center;
