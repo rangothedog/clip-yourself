@@ -41,7 +41,7 @@ export default function TypeAnywhere() {
         </Reveal>
 
         <Reveal className="type-anywhere__copy" delay={120}>
-          <p className="pill">🎯 New in 1.0.6</p>
+          <p className="pill">✨ New: type or paste into any field</p>
           <h2 className="type-anywhere__title">
             Drag, drop, and <span className="accent">it types itself</span>
           </h2>
@@ -58,6 +58,12 @@ export default function TypeAnywhere() {
               fields and leaves your clipboard alone
             </li>
             <li>Select several text clips and they&rsquo;re typed in order, one per line</li>
+            <li>
+              Rather paste? Drag a clip itself out of the sidebar. Text fields
+              light up with <strong>📋 Paste here</strong>, and dropping it
+              pastes it right in. Hold <kbd>Shift</kbd> and it switches to{" "}
+              <strong>⌨ Type here</strong> instead
+            </li>
           </ul>
           <p className="type-anywhere__honest">
             Fine print: Windows won&rsquo;t let a regular app type into programs

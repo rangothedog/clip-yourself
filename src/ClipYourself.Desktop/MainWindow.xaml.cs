@@ -202,23 +202,31 @@ public partial class MainWindow : Window
                 return;
             }
 
-            _typingCancel = new CancellationTokenSource();
-            var cancel = _typingCancel.Token;
-            if (text.Length > 200) vm.Notify("⌨ Typing… (Esc to stop)");
-            var result = await Task.Run(() => target.FocusAndType(text, cancel));
-            vm.Notify(result switch
-            {
-                Interop.TypeResult.Typed => $"⌨ Typed {text.Length:N0} character{(text.Length == 1 ? "" : "s")}",
-                Interop.TypeResult.Cancelled => "Typing stopped",
-                Interop.TypeResult.Blocked => "That window blocked typing (it may be running as administrator)",
-                Interop.TypeResult.FocusFailed => "Couldn't bring that window forward — nothing typed",
-                _ => "That text field went away"
-            });
+            await TypeIntoFieldAsync(target, text);
         }
         finally
         {
             picker.Dispose();
         }
+    }
+
+    /// <summary>Types <paramref name="text"/> into another app's field as keystrokes, reporting the outcome.</summary>
+    private async Task TypeIntoFieldAsync(Interop.TextFieldTarget target, string text)
+    {
+        if (ViewModel is not { } vm) return;
+        _typingCancel?.Cancel(); // only one run at a time
+        _typingCancel = new CancellationTokenSource();
+        var cancel = _typingCancel.Token;
+        if (text.Length > 200) vm.Notify("⌨ Typing… (Esc to stop)");
+        var result = await Task.Run(() => target.FocusAndType(text, cancel));
+        vm.Notify(result switch
+        {
+            Interop.TypeResult.Typed => $"⌨ Typed {text.Length:N0} character{(text.Length == 1 ? "" : "s")}",
+            Interop.TypeResult.Cancelled => "Typing stopped",
+            Interop.TypeResult.Blocked => "That window blocked typing (it may be running as administrator)",
+            Interop.TypeResult.FocusFailed => "Couldn't bring that window forward — nothing typed",
+            _ => "That text field went away"
+        });
     }
 
     /// <summary>Capture yanked away mid-drag (Alt+Tab, Esc, another app) — abandon the pick.</summary>
@@ -333,10 +341,96 @@ public partial class MainWindow : Window
         var clips = clip.IsSelected ? vm.SelectedClipsInOrder() : new List<ClipItem> { clip };
         if (clips.Count == 0) clips = new List<ClipItem> { clip };
 
-        // Move is for internal reorder/file; Copy is for dropping out to Explorer
-        // (copy-only there, so a shell drop can never relocate a blob or original).
-        DragDrop.DoDragDrop((DependencyObject)sender, vm.BuildDragData(clips),
-            DragDropEffects.Copy | DragDropEffects.Move);
+        var data = vm.BuildDragData(clips);
+        var source = (UIElement)sender;
+        var text = data.GetDataPresent(DataFormats.UnicodeText) ? data.GetText() : null;
+
+        // Text drags light up any app's text field with a "Paste here" reticle (holding
+        // Shift switches it to "Type here"). Releasing over a lit field cancels the OLE
+        // drop (most fields ignore or mishandle it, and some would take the temp .txt file
+        // instead) and pastes or types the text ourselves.
+        var picker = string.IsNullOrEmpty(text) ? null : new Interop.TextFieldPicker(Controls.ReticleWindow.PasteLabel);
+        Interop.TextFieldTarget? dropTarget = null;
+        var typeOnDrop = false;
+
+        void OnQueryContinue(object s, QueryContinueDragEventArgs args)
+        {
+            if (picker == null) return;
+            if (args.EscapePressed)
+            {
+                picker.Stop();
+                return;
+            }
+
+            var shift = (args.KeyStates & DragDropKeyStates.ShiftKey) != 0;
+            if ((args.KeyStates & DragDropKeyStates.LeftMouseButton) == 0)
+            {
+                dropTarget = picker.TargetUnderCursor();
+                typeOnDrop = shift;
+                picker.Stop();
+                if (dropTarget != null)
+                {
+                    args.Action = DragAction.Cancel;
+                    args.Handled = true; // keep WPF's default handler from turning it back into a Drop
+                }
+                return;
+            }
+            picker.Label = shift ? Controls.ReticleWindow.TypeLabel : Controls.ReticleWindow.PasteLabel;
+            picker.Track();
+        }
+
+        // Over a lit field the target app usually shows the "no drop" cursor — show a plain
+        // arrow instead, since releasing there does paste.
+        void OnGiveFeedback(object s, GiveFeedbackEventArgs args)
+        {
+            if (picker?.TargetUnderCursor() == null) return;
+            args.UseDefaultCursors = false;
+            Mouse.SetCursor(Cursors.Arrow);
+            args.Handled = true;
+        }
+
+        if (picker != null)
+        {
+            source.QueryContinueDrag += OnQueryContinue;
+            source.GiveFeedback += OnGiveFeedback;
+        }
+        try
+        {
+            // Move is for internal reorder/file; Copy is for dropping out to Explorer
+            // (copy-only there, so a shell drop can never relocate a blob or original).
+            DragDrop.DoDragDrop(source, data, DragDropEffects.Copy | DragDropEffects.Move);
+        }
+        finally
+        {
+            if (picker != null)
+            {
+                source.QueryContinueDrag -= OnQueryContinue;
+                source.GiveFeedback -= OnGiveFeedback;
+                picker.Dispose();
+            }
+        }
+
+        if (dropTarget == null || text == null) return;
+        if (typeOnDrop) _ = TypeIntoFieldAsync(dropTarget, text);
+        else PasteIntoField(dropTarget, text);
+    }
+
+    private async void PasteIntoField(Interop.TextFieldTarget target, string text)
+    {
+        if (ViewModel is not { } vm) return;
+        if (!vm.PrepareDropPaste(text))
+        {
+            vm.Notify("Clipboard is busy — nothing pasted");
+            return;
+        }
+        var result = await Task.Run(target.FocusAndPaste);
+        vm.Notify(result switch
+        {
+            Interop.TypeResult.Typed => "📋 Pasted",
+            Interop.TypeResult.Blocked => "That window blocked the paste (it may be running as administrator)",
+            Interop.TypeResult.FocusFailed => "Couldn't bring that window forward — nothing pasted",
+            _ => "That text field went away"
+        });
     }
 
     // ----- dropping a clip onto another clip reorders it -----

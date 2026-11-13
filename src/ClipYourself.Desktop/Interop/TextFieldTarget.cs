@@ -89,6 +89,23 @@ public sealed class TextFieldTarget
     /// <summary>Brings the field's window forward, focuses the field, then types <paramref name="text"/>.</summary>
     public TypeResult FocusAndType(string text, CancellationToken cancel)
     {
+        var focus = Focus();
+        return focus != TypeResult.Typed ? focus : KeystrokeTyper.Type(text, cancel);
+    }
+
+    /// <summary>
+    /// Brings the field's window forward, focuses the field, then presses Ctrl+V — the
+    /// caller has already put the text on the clipboard.
+    /// </summary>
+    public TypeResult FocusAndPaste()
+    {
+        var focus = Focus();
+        return focus != TypeResult.Typed ? focus : KeystrokeTyper.Paste();
+    }
+
+    /// <summary>Activates and focuses the field. <see cref="TypeResult.Typed"/> means "ready for input".</summary>
+    private TypeResult Focus()
+    {
         try
         {
             if (TopWindow != IntPtr.Zero)
@@ -106,12 +123,11 @@ public sealed class TextFieldTarget
         // keystrokes start arriving, or the first few land in the old focus.
         Thread.Sleep(120);
 
-        // SendInput goes to whatever is foreground. If Windows refused the switch, typing
-        // now would spray the text into some other app — bail instead.
+        // SendInput goes to whatever is foreground. If Windows refused the switch, sending
+        // keys now would spray them into some other app — bail instead.
         if (TopWindow != IntPtr.Zero && GetAncestor(GetForegroundWindow(), GA_ROOT) != TopWindow)
             return TypeResult.FocusFailed;
-
-        return KeystrokeTyper.Type(text, cancel);
+        return TypeResult.Typed;
     }
 
     private const uint GA_ROOT = 2;
@@ -140,6 +156,10 @@ public static class KeystrokeTyper
 
     public static TypeResult Type(string text, CancellationToken cancel)
     {
+        // A modifier still held from the gesture (Shift-drag) would turn Enter into
+        // Shift+Enter or chars into shortcuts — give the user a moment to let go.
+        WaitForModifiersReleased(TimeSpan.FromSeconds(2), cancel);
+
         // Normalize newlines so CRLF becomes a single Enter press.
         text = text.Replace("\r\n", "\n").Replace('\r', '\n');
 
@@ -164,6 +184,29 @@ public static class KeystrokeTyper
             }
         }
         return Flush(batch) ? TypeResult.Typed : TypeResult.Blocked;
+    }
+
+    /// <summary>Presses Ctrl+V in whatever has keyboard focus.</summary>
+    public static TypeResult Paste()
+    {
+        var batch = new List<INPUT>(4)
+        {
+            Key(VK_CONTROL, 0, 0),
+            Key(VK_V, 0, 0),
+            Key(VK_V, 0, KEYEVENTF_KEYUP),
+            Key(VK_CONTROL, 0, KEYEVENTF_KEYUP)
+        };
+        return Flush(batch) ? TypeResult.Typed : TypeResult.Blocked;
+    }
+
+    private static void WaitForModifiersReleased(TimeSpan timeout, CancellationToken cancel)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline && !cancel.IsCancellationRequested &&
+               ((GetAsyncKeyState(VK_SHIFT) | GetAsyncKeyState(VK_CONTROL) | GetAsyncKeyState(VK_MENU)) & 0x8000) != 0)
+        {
+            Thread.Sleep(15);
+        }
     }
 
     private static bool Flush(List<INPUT> batch)
@@ -197,6 +240,10 @@ public static class KeystrokeTyper
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const uint KEYEVENTF_UNICODE = 0x0004;
     private const ushort VK_RETURN = 0x0D;
+    private const ushort VK_SHIFT = 0x10;
+    private const ushort VK_CONTROL = 0x11;
+    private const ushort VK_MENU = 0x12;
+    private const ushort VK_V = 0x56;
     private const int VK_ESCAPE = 0x1B;
 
     [StructLayout(LayoutKind.Sequential)]

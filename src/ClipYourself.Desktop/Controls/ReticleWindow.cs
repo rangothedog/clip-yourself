@@ -15,9 +15,20 @@ namespace ClipYourself.Desktop.Controls;
 public sealed class ReticleWindow : Window
 {
     private const double PadDip = 6;     // reticle sits this far outside the field
-    private const double LabelDip = 20;  // "Type here" tag above the frame
+    private const double LabelDip = 20;  // "Type here" / "Paste here" tag above the frame
 
-    public ReticleWindow()
+    public const string TypeLabel = "⌨ Type here";
+    public const string PasteLabel = "📋 Paste here";
+
+    private readonly TextBlock _label = new()
+    {
+        Foreground = Brushes.White,
+        FontSize = 11,
+        FontWeight = FontWeights.SemiBold,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+
+    public ReticleWindow(string label = TypeLabel)
     {
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
@@ -34,13 +45,21 @@ public sealed class ReticleWindow : Window
         Top = -32000;
         Width = 1;
         Height = 1;
-        Content = BuildVisual();
+        _label.Text = label;
+        Content = BuildVisual(_label);
 
         // Styles must be in place before the first Show, or it would steal activation once.
         var hwnd = new WindowInteropHelper(this).EnsureHandle();
         var ex = GetWindowLong(hwnd, GWL_EXSTYLE);
         SetWindowLong(hwnd, GWL_EXSTYLE,
             ex | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+    }
+
+    /// <summary>The tag text above the frame (switchable mid-drag).</summary>
+    public string Label
+    {
+        get => _label.Text;
+        set { if (_label.Text != value) _label.Text = value; }
     }
 
     /// <summary>Wraps the reticle around <paramref name="bounds"/> (screen pixels) and shows it.</summary>
@@ -60,7 +79,7 @@ public sealed class ReticleWindow : Window
         SetWindowPos(hwnd, HWND_TOPMOST, left, top, width, height, SWP_NOACTIVATE);
     }
 
-    private static UIElement BuildVisual()
+    private static UIElement BuildVisual(TextBlock label)
     {
         var accent = (Brush)Application.Current.FindResource("AccentBrush");
         var root = new Grid();
@@ -88,7 +107,7 @@ public sealed class ReticleWindow : Window
         });
         root.Children.Add(brackets);
 
-        // "Type here" tag riding the top-left corner.
+        // Action tag riding the top-left corner.
         root.Children.Add(new Border
         {
             HorizontalAlignment = HorizontalAlignment.Left,
@@ -97,14 +116,7 @@ public sealed class ReticleWindow : Window
             Background = accent,
             CornerRadius = new CornerRadius(4),
             Padding = new Thickness(6, 0, 7, 0),
-            Child = new TextBlock
-            {
-                Text = "⌨ Type here",
-                Foreground = Brushes.White,
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                VerticalAlignment = VerticalAlignment.Center
-            }
+            Child = label
         });
         return root;
     }

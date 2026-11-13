@@ -10,11 +10,42 @@ namespace ClipYourself.Desktop.Interop;
 /// </summary>
 public sealed class TextFieldPicker : IDisposable
 {
-    private readonly ReticleWindow _reticle = new();
+    private readonly ReticleWindow _reticle;
     private (int X, int Y) _pending;
     private bool _hasPending;
     private bool _busy;
     private bool _disposed;
+
+    public TextFieldPicker(string label = ReticleWindow.TypeLabel) => _reticle = new ReticleWindow(label);
+
+    /// <summary>The reticle's tag text — e.g. flip between "Paste here" and "Type here" mid-drag.</summary>
+    public string Label
+    {
+        get => _reticle.Label;
+        set => _reticle.Label = value;
+    }
+
+    /// <summary>The field the reticle is currently wrapped around, if any.</summary>
+    public TextFieldTarget? Current { get; private set; }
+
+    /// <summary>
+    /// The highlighted field, provided the cursor is still inside it — no UI Automation
+    /// call, so it's safe on the UI thread at the instant a drag is released.
+    /// </summary>
+    public TextFieldTarget? TargetUnderCursor()
+    {
+        var target = Current;
+        if (target == null) return null;
+        var (x, y) = CursorPosition();
+        return target.Bounds.Contains(x, y) ? target : null;
+    }
+
+    /// <summary>Takes the reticle down and stops tracking (the drag is over).</summary>
+    public void Stop()
+    {
+        _disposed = true;
+        _reticle.Hide();
+    }
 
     /// <summary>Current cursor position in screen pixels (same space as UI Automation bounds).</summary>
     public static (int X, int Y) CursorPosition()
@@ -52,6 +83,7 @@ public sealed class TextFieldPicker : IDisposable
                 var (x, y) = _pending;
                 var target = await Task.Run(() => TextFieldTarget.FromPoint(x, y));
                 if (_disposed) break;
+                Current = target;
                 if (target != null) _reticle.ShowAround(target.Bounds);
                 else _reticle.Hide();
             }

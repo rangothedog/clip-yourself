@@ -64,6 +64,20 @@ const FAQS: QA[] = [
     ),
   },
   {
+    q: "Can I drag a clip straight into a text box?",
+    a: (
+      <p>
+        Yes. Drag any text clip out of the sidebar and hover a text field in
+        any app. It lights up with <strong>📋 Paste here</strong>, and letting
+        go pastes the clip into it (it also becomes your clipboard, like any
+        paste). Hold <kbd>Shift</kbd> while dropping to have it typed in
+        keystroke by keystroke instead, for fields that block paste. Press{" "}
+        <kbd>Esc</kbd> mid-drag to call it off. Dropping onto Explorer or the
+        desktop still saves the clip as a file.
+      </p>
+    ),
+  },
+  {
     q: "Is there a browser extension?",
     a: (
       <p>

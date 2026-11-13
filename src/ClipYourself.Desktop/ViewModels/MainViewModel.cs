@@ -1044,6 +1044,21 @@ public class MainViewModel : INotifyPropertyChanged
         return null;
     }
 
+    /// <summary>
+    /// Puts dragged clip text on the clipboard ahead of a "Paste here" drop. Our own write
+    /// is not re-captured as a new clip.
+    /// </summary>
+    public bool PrepareDropPaste(string text)
+    {
+        _suppressCaptureUntil = DateTime.Now.AddMilliseconds(800);
+        try
+        {
+            Clipboard.SetDataObject(text, true);
+            return true;
+        }
+        catch (System.Runtime.InteropServices.ExternalException) { return false; } // clipboard locked
+    }
+
     public void Notify(string message) => ShowStatus(message);
 
     private void ShowStatus(string message)
